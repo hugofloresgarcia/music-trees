@@ -1,0 +1,14 @@
+# Directories for large, project-specific files
+cache/*
+!cache/.gitkeep
+data/*
+!data/.gitkeep
+runs/*
+!runs/.gitkeep
+
+__pycache__/
+.DS_Store
+._.DS_Store
+.ipynb_checkpoints/
+.vscode/
+*.egg-info/
