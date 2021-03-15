@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytorch_lightning as pl
 
-import NAME
+import music_trees as mt
 
 
 ###############################################################################

@@ -7,15 +7,15 @@ with open('README.md') as file:
 
 # TODO - replace with details of your project
 setup(
-    name='NAME',
+    name='music_trees',
     description='',
     version='0.0.1',
     author='Hugo Flores Garcia',
     author_email='hf01049@georgiasouthern.edu',
-    url='https://github.com/hugofloresgarcia/NAME',
+    url='https://github.com/hugofloresgarcia/music-trees',
     install_requires=['pytorch-lightning'],
-    packages=['NAME'],
-    package_data={'NAME': ['assets/*']},
+    packages=['music_trees'],
+    package_data={'music_trees': ['assets/*']},
     long_description=long_description,
     long_description_content_type='text/markdown',
     keywords=[],

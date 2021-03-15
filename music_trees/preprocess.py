@@ -3,7 +3,7 @@
 
 import argparse
 
-import NAME
+import music_trees as mt
 
 
 ###############################################################################

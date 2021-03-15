@@ -5,7 +5,7 @@ import argparse
 import json
 from pathlib import Path
 
-import NAME
+import music_trees as mt
 
 
 ###############################################################################

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-import NAME
+import music_trees as mt
 
 
 TEST_ASSETS_DIR = Path(__file__).parent / 'assets'
