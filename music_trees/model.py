@@ -3,12 +3,27 @@
 from functools import reduce
 from operator import __add__
 import argparse
+import logging
 from collections import OrderedDict
 
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+def batch_detach(dict_of_tensors):
+    for k, v in dict_of_tensors.items():
+        if isinstance(v, torch.Tensor):
+            dict_of_tensors[k] = v.detach()
+    return dict_of_tensors
+
+def batch_cpu(dict_of_tensors):
+    for k, v in dict_of_tensors.items():
+        if isinstance(v, torch.Tensor):
+            dict_of_tensors[k] = v.cpu()
+    return dict_of_tensors
+
+batch_detach_cpu = lambda x: batch_cpu(batch_detach(x))
 
 class ConvBlock(nn.Module):
 
@@ -43,7 +58,7 @@ class ConvBlock(nn.Module):
 class Backbone(nn.Module):
 
     def __init__(self):
-
+        super().__init__()
         self.b_norm = nn.BatchNorm2d(1)
         self.conv1 = ConvBlock(in_channels=1, out_channels=128, kernel_size=(3, 3))
         self.conv2 = ConvBlock(in_channels=128, out_channels=128, kernel_size=(3, 3))
@@ -68,20 +83,25 @@ class Backbone(nn.Module):
 
         return x
 
-
-class Model(pl.LightningModule):
+class ProtoNet(pl.LightningModule):
     """PyTorch Lightning model definition"""
 
     def __init__(self, parents: list):
         super().__init__()
         self.save_hyperparameters()
 
+        self.alpha = torch.tensor(0.2)
         self.backbone = Backbone()
+
+        # do a dummy forward pass through the 
+        # embedding model to get the output shape
+        dummy_input = torch.randn((1, 1, 128, 199))
+        dummy_out = self.backbone(dummy_input)
+        root_d = dummy_out.shape[-1]
 
         # given a parent node in the hierarchy, there will be 
         # one linear layer that maps from the backbone embedding
-        # to the parent node
-        root_d = None
+        # to a smaller embedding
         parent_d = root_d // len(parents)
         self.parents = nn.ModuleList([nn.Linear(root_d, parent_d) for name in parents])
         
@@ -114,7 +134,50 @@ class Model(pl.LightningModule):
         return x, probits
 
     def forward(self, support, query):
-        raise NotImplementedError
+        """ 
+        support should be a torch Tensor of shape (b(atch), c(lass), k, 1, f(requency), t(ime))
+        query should be a torch Tensor of shape (b, q, 1, f(requency), t(ime))
+
+        output will be a dict with
+        
+        dists: euclidean distances formed from comparing query vectors with support prototypes, with shape (b, q, c)
+        query_probits: log-probabilities for query examples, shape (b, q, p(arents)
+        support_probits: log-probabilities for each example in the (b(atch), c(lass), k, p(arents))
+        """
+        assert support.ndim == 6
+        assert query.ndim == 5
+
+        # get support embeddings and parent probits
+        b_dim, c_dim, k_dim, _, f_dim, t_dim = support.shape()
+        support = support.view(b_dim*c_dim*k_dim, 1, f_dim, t_dim)
+        support, support_probits = self._forward(support)
+        
+        support = support.view(b_dim, c_dim, k_dim, -1) # expand back
+        support_probits = support_probits.view(b_dim, c_dim, k_dim, -1) # expand probits as well
+
+        # take mean over k_dim to get the prototypes
+        prototypes = support.mean(dim=2, keepdim=False)
+
+        # get query embeddings
+        b_dim, q_dim, _, f_dim, t_dim = query.shape()
+        query = query.view(b_dim * q_dim, 1, f_dim, t_dim)
+        query, query_probits = self._forward(query)
+
+        query = query.view(b_dim, q_dim, -1)
+        query_probits = query_probits.view(b_dim, q_dim, -1)
+
+        # by here, query should be shape (b, q, n)
+        # and prototypes should be shape (b, c, n)
+
+        # compute euclidean distances
+        # output shoudl be shape (b, q, c)
+        # so that the row vectors are the logits for the classes 
+        # for each query, in the batch
+        dists = torch.cdist(query, prototypes, p=2)
+
+        return {'distances': dists, 
+                'query_probits': query_probits, 
+                'support_probits': support_probits}
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -124,21 +187,92 @@ class Model(pl.LightningModule):
         #        parser.add_argument()
         return parser
 
+    @staticmethod
+    def criterion(ypred, ytrue):
+        # in this case, our probits will be shape (batch, query, n)
+        # and our targets will be (batch, query)
+        assert ypred.ndim == 3
+        assert ytrue.ndim == 2
+
+        b, q, _ = ypred.shape
+        ypred = ypred.view(b * q, -1)
+        ytrue = ytrue.view(-1)
+
+        return F.cross_entropy(ypred, ytrue)
+
+    def _squash_parent_targets(batch):
+        support_targets = batch['support_targets']
+        support_targets = support_targets.view(-1)
+
+        query_targets = batch['query_targets']
+        query_targets = query_targets.view(-1)
+
+        return torch.cat([support_targets, query_targets], dim=-1)
+
+    def _squash_parent_probits(output):
+        support_probits = output['support_probits']
+        support_probits = support_probits.view(-1, support_probits.shape[-1])
+
+        query_probits = output['query_probits']
+        query_probits = query_probits.view(-1, support_probits.shape[-1])
+        
+        return torch.cat([support_probits, query_probits], dim=-1)
+
+    def _main_step(self, batch, index):
+        # grab inputs
+        support = batch['support']
+        query = batch['query']
+
+        # grab targets
+        proto_targets = batch['targets']
+        parent_targets = self._squash_parent_targets(batch)
+
+        # grab predictions
+        output = self(support, query)
+        parent_probits = self._squash_parent_probits(output)
+
+        # compute our prototype loss
+        proto_loss = self.criterion(output['distances'], proto_targets)
+        parent_loss = self.criterion(parent_probits, parent_taregets)
+
+        loss = (1 - self.alpha) * proto_loss + self.alpha * parent_loss
+
+        output['proto_loss'] = proto_loss
+        output['parent_loss'] = parent_loss
+        output['loss'] = loss
+
+        return output
+
+    def _log_metrics(self, output, stage='train'):
+        self.log(f'loss/{stage}', output['loss'].detach().cpu())
+        self.log(f'proto_loss/{stage}', output['loss'].detach().cpu())
+        self.log(f'parent_loss/{stage}', output['loss'].detach().cpu())
+
     def training_step(self, batch, index):
         """Performs one step of training"""
-        # TODO - implement training step
-        raise NotImplementedError
+        output = self._main_step(batch, index)
+        self._log_metrics(output, stage='train')
+
+        return output['loss']
 
     def validation_step(self, batch, index):
         """Performs one step of validation"""
-        # TODO - implement validation step
-        raise NotImplementedError
+        output = self._main_step(batch, index)
+        output = batch_detach_cpu(output)
+        self._log_metrics(output, stage='val')
 
     def test_step(self, batch, index):
         """Performs one step of testing"""
-        # OPTIONAL - only implement if you have meaningful objective metrics
-        raise NotImplementedError
+        output = self._main_step(batch, index)
+        output = batch_detach_cpu(output)
+        self._log_metrics(output, stage='test') 
 
     def configure_optimizer(self):
         """Configure optimizer for training"""
         return torch.optim.Adam(self.parameters())
+
+
+if __name__ == "__main__":
+
+    model = ProtoNet(parents=['strings', 'winds', 'percussion', 'electric'])
+    logging.info(model)

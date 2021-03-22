@@ -1,0 +1,142 @@
+strings:
+  # bowed:
+    - erhu
+    - violin
+    - viola
+    - cello
+    - double bass
+    - violin section
+    - viola section
+    - cello section
+    - string section
+    - dilruba
+  # plucked:
+    - acoustic guitar
+    - clean electric guitar
+    - electric bass
+    - lap steel guitar
+    - banjo
+    - guzheng
+    - harp
+    - harpsichord
+    - liuqin
+    - mandolin
+    - oud
+    - slide guitar
+    - ukulele
+    - zhongruan
+    - sitar
+  # struck:
+    - dulcimer
+    - yangqin
+    - piano
+    - tack piano
+flutes:
+  - dizi
+  - flute
+  - flute section
+  - piccolo
+  - bamboo flute
+  - panpipes
+  - recorder
+single reeds:
+  - alto saxophone
+  - baritone saxophone
+  - bass clarinet
+  - clarinet
+  - clarinet section
+  - tenor saxophone
+  - soprano saxophone
+double reeds:
+  - oboe
+  - english horn
+  - bassoon
+  - bagpipe
+free reeds:
+  - harmonica
+  - concertina
+  - accordion
+  - bandoneon
+  - harmonium
+  - pipe organ
+  - melodica
+brass:
+  - trumpet
+  - cornet
+  - trombone
+  - french horn
+  - euphonium
+  - tuba
+  - brass section
+  - french horn section
+  - trombone section
+  - horn section
+  - trumpet section
+voices:
+  voices_1:
+    - male singer
+    - female singer
+    - male speaker
+    - female speaker
+    - male rapper
+  voices_2:
+    - female rapper
+    - beatboxing
+    - vocalists
+    - choir
+    - crowd
+    - male screamer
+    - female screamer
+percussion:
+  pitched:
+    - xylophone
+    - vibraphone
+    - marimba
+    - glockenspiel
+    - chimes
+    - electric piano
+  idiophones:
+    - triangle
+    - sleigh bells
+    - cowbell
+    - cabasa
+    - high hat
+    - gong
+    - guiro
+    - gu
+    - cymbal
+    - castanet
+    - claps
+    - rattle
+    - shaker
+    - maracas
+    - whistle
+    - snaps
+  drums:
+    # - drum machine
+    - timpani
+    - toms
+    - snare drum
+    - kick drum
+    - bass drum
+    - bongo
+    - conga
+    - tambourine
+    - darbuka
+    - doumbek
+    - tabla
+    - auxiliary percussion
+    - drum set
+electric:
+  amplified:
+    - distorted electric guitar
+  electronic:
+    - electronic organ
+    - synthesizer
+    - theremin
+    - fx/processed sound
+    - scratches
+    - sampler
+other:
+    - Main System
+    - Unlabeled

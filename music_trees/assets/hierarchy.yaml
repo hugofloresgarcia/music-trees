@@ -1,20 +1,13 @@
-electric:
-- clean electric guitar
-- distorted electric guitar
-- electric bass
-- lap steel guitar
-- drum machine
-- electric piano
-- synthesizer
 percussion:
+- vibraphone
+- glockenspiel
+- chimes
+- electric piano
 - gong
 - gu
 - cymbal
-- chimes
 - claps
 - shaker
-- vibraphone
-- glockenspiel
 - timpani
 - toms
 - snare drum
@@ -35,6 +28,9 @@ strings:
 - double bass
 - cello section
 - acoustic guitar
+- clean electric guitar
+- electric bass
+- lap steel guitar
 - banjo
 - guzheng
 - harp
@@ -45,6 +41,12 @@ strings:
 - yangqin
 - piano
 - tack piano
+voices:
+- male singer
+- female singer
+- male speaker
+- male rapper
+- vocalists
 winds:
 - dizi
 - flute

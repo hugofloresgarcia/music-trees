@@ -17,6 +17,7 @@ TEST_SIZE = 0.3
 # because they're too general (horn section) or not an instrument (sampler)
 UNWANTED_CLASSES =  ('Main System', 'fx/processed sound', 'sampler', 'horn section',
                      'string section', 'brass section', 'castanet', 'electronic organ', 'scratches')
+UNWANTED_PARENTS = ('electric', 'other')
 
 # because instrument sections are the same as the instrument, we want them to be considered 
 # as one instrument
@@ -58,13 +59,13 @@ if __name__ == "__main__":
     instruments = load_unique_instrument_list()
 
     # we will be using a new taxonomy 
-    taxonomy = mdb.INST_TAXONOMY
+    taxonomy = mt.utils.data.load_metadata_entry(mt.ASSETS_DIR / 'base-taxonomy.yaml', format='yaml')
 
     # our redacted hierarchy
     hierarchy = {}
     partitions = {'train': [], 'test': []}
     for parent, subparent_dict in taxonomy.items():
-        if isinstance(subparent_dict, list):
+        if parent in UNWANTED_PARENTS:
             continue
         
         parent_list = []
@@ -87,6 +88,10 @@ if __name__ == "__main__":
         print(f'\t TRAIN: {Fore.BLUE}{train_subpartition}{Style.RESET_ALL}')
         print(f'\t TEST: {Fore.MAGENTA}{test_subpartition}{Style.RESET_ALL}')
 
+        # remove the counts for the actual partition
+        train_subpartition = [c[0] for c in train_subpartition]
+        test_subpartition = [c[0] for c in test_subpartition]
+
         partitions['train'].extend(train_subpartition)
         partitions['test'].extend(test_subpartition)
 
@@ -99,7 +104,7 @@ if __name__ == "__main__":
     logging.info(f'number of test classes: {len(partitions["test"])}')
 
     # save the partitions
-    save_path = mt.ASSETS_DIR / 'partition-map.json'
+    save_path = mt.ASSETS_DIR / 'partition.json'
     mt.utils.data.save_metadata_entry(partitions, save_path, format='json')
     logging.info(f'saved partition map to {save_path}')
 

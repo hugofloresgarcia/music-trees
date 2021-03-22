@@ -165,7 +165,7 @@ def load_metadata_entry(path, format='json'):
             entry = json.load(f)
     elif format == 'yaml':
         with open(path, 'r') as f:
-            entry = yaml.load(f, allow_pickle=True)
+            entry = yaml.load(f)
     else:
         raise ValueError(f'unsupported format: {format}')
     

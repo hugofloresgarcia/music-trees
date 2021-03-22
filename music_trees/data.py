@@ -3,38 +3,120 @@
 
 import json
 import os
+import random
 
 import pytorch_lightning as pl
 import torch
-
+import numpy as np
+from nussl import AudioSignal
+import librosa
 import music_trees as mt
+import medleydb as mdb
 
 
 ###############################################################################
 # Dataset
 ###############################################################################
 
+### NEW PLAN
+# MDB Meta sends out a dict with two keys:
+# support: a dict with structure {classname: AudioSignal}
+# query: same thing
+# maybe add a to_hierarchical_onehot transform that turns the classname key into a 
+# hierarchical onehot.
+# BUT it should also include the parent targets
 
-class Dataset(torch.utils.data.Dataset):
-    """PyTorch dataset
+# then, to transforms
+# transforms.SomeKindOfAugmentation?
+# transforms.STFT and// or Mel if necessary
+# transforms.ToEpisode (takes care of stacking queries and making them tensors ready to be input)
 
-    Arguments
-        name - string
-            The name of the dataset
-        partition - string
-            The name of the data partition
-    """
+class MDBMeta(torch.utils.data.Dataset):
 
-    def __init__(self, name, partition):
-        # Get list of stems
-        self.stems = partitions(name)[partition]
+    def __init__(self, partition: str, n_class: int, n_shot: int,
+                n_query: int, duration: float = 0.5, 
+                sample_rate: int = 16000, transform=None):
+        super().__init__()
+        # load the classlist for this partition
+        self.classes =  mt.utils.data.load_metadata_entry( mt.ASSETS_DIR / 'partition.json', 
+                                                          format='json')[partition]
+
+        # load the parent-child hierarchy so we can grab the parents for each instrument
+        self.hierarchy = mt.utils.data.load_metadata_entry( mt.ASSETS_DIR / 'hierarchy.yaml', format='yaml')
+        self.parents = get_parents_from_hierarchy(self.hierarchy)
+
+        self.n_class = n_class
+        self.n_shot = n_shot
+        self.n_query = n_query
+
+        self.transform = transform
+        self.sample_rate = sample_rate
+        self.duration = duration
+
+    def _get_example_for_class(self, name):
+        files = mdb.get_files_for_instrument(name)
+        breakpoint()
+
+        # grab a random file
+        file = random.choice(files)
+
+        # load audio
+        signal = AudioSignal(path_to_input_file=file, sample_rate=self.sample_rate).to_mono()
+        
+        # remove silence from the audio data
+        signal.audio_data = np.expand_dims(mt.utils.effects.trim_silence(signal.audio_data), 0)
+
+        # pick a start point
+        start = random.uniform(0, signal.signal_duration - self.duration)
+        end = start + self.duration
+
+        # grab that chunk
+        signal.audio_data = signal[int(start*signal.sample_rate):int(end*signal.sample_rate)]
+
+        return signal.audio_data
 
     def __getitem__(self, index):
-        """Retrieve the indexth item"""
-        stem = self.stems[index]
+        # get n_class classes
+        class_subset = list(random.sample(self.classes, self.n_class))
 
-        # TODO - Load from stem
-        raise NotImplementedError
+        # grab our support set
+
+        # the grab our support set of audio signals
+        # the final stacked array should have shape (n_class, n_shot, 1, sample)
+        # the labels should have shape (n_class, n_shot)
+        support = []
+        support_targets = []
+        for c in class_subset:
+            shots = np.stack([self._get_example_for_class(c) for _ in range(self.n_shot)])
+            support.append(shots)
+
+            targets = np.array([self._get_parent_label(c)])
+            support_targets.append(targets)
+        support = np.stack(support)            
+        support_targets = np.stack(support_targets)
+        
+        # grab the query set of audio signals
+        # the stacked array should have shape (n_query, 1, sample)
+        # the labels should have shape (n_query)
+        query = []
+        query_targets = []
+        for q in range(self.n_query):
+            # pick a random class from the subset to query
+            c = random.choice(class_subset)
+            query.append(self._get_example_for_class(c))
+            query_targets.append(self._get_parent_label(c))
+            
+        query = np.stack(query)
+        query_targets = np.array(query_targets)
+
+        return {
+            'query': query,
+            'query_targets': query_targets, 
+            'support': support, 
+            'support_targets': support_targets, 
+            'classes': class_subset
+            'index': index,
+        }
 
     def __len__(self):
         """Length of the dataset"""
@@ -71,12 +153,10 @@ class DataModule(pl.LightningDataModule):
 
     def val_dataloader(self):
         """Retrieve the PyTorch DataLoader for validation"""
-        # TODO - second argument must be the name of your valid partition
         return loader(self.name, 'valid', self.batch_size, self.num_workers)
 
     def test_dataloader(self):
-        """Retrieve the PyTorch DataLoader for testing"""
-        # TODO - second argument must be the name of your test partition
+        """Retrieve the PyTorch DataLoader for testing"""\
         return loader(self.name, 'test', self.batch_size, self.num_workers)
 
 
@@ -84,105 +164,22 @@ class DataModule(pl.LightningDataModule):
 # Data loader
 ###############################################################################
 
+def collate_fn(self, batch):
+    raise NotImplementedError
 
 def loader(dataset, partition, batch_size=64, num_workers=None):
     """Retrieve a data loader"""
     return torch.utils.data.DataLoader(
-        dataset=Dataset(dataset, partition),
+        dataset=dataset,
         batch_size=batch_size,
         shuffle='train' in partition,
         num_workers=os.cpu_count() if num_workers is None else num_workers,
         pin_memory=True,
         collate_fn=collate_fn)
 
-
-###############################################################################
-# Collate function
-###############################################################################
-
-
-def collate_fn(batch):
-    """Turns __getitem__ output into a batch ready for inference
-
-    Arguments
-        batch - list
-            The outputs of __getitem__ for each item in batch
-
-    Returns
-        collated - tuple
-            The input features and ground truth targets ready for inference
-    """
-    # TODO - Perform any necessary padding or slicing to ensure that input
-    #        features and output targets can be concatenated. Then,
-    #        concatenate them and return them as torch tensors. See
-    #        https://pytorch.org/docs/stable/data.html#dataloader-collate-fn
-    #        for more information on the collate function (note that
-    #        automatic batching is enabled).
-    raise NotImplementedError
-
-
-###############################################################################
-# File organization
-###############################################################################
-
-
-def partitions(name):
-    """Retrieve the data partitions for a dataset
-
-    Arguments
-        name - string
-            The dataset name
-
-    Returns
-        partitions - dict(string, list(string))
-            The dataset partitions. The key is the partition name and the
-            value is the list of stems belonging to that partition.
-    """
-    if not hasattr(partitions, name):
-        with open(NAME.ASSETS_DIR / name / 'partition.json') as file:
-            setattr(partitions, name, json.load(file))
-    return getattr(partitions, name)
-
-
-def stem_to_file(name, stem):
-    """Resolve stem to a file in the dataset
-
-    Arguments
-        name - string
-            The name of the dataset
-        stem - string
-            The stem representing one item in the dataset
-
-    Returns
-        file - Path
-            The corresponding file
-    """
-    directory = NAME.DATA_DIR / name
-
-    # TODO - replace with your datasets
-    if name == 'DATASET':
-        return DATASET_stem_to_file(directory, stem)
-
-    raise ValueError(f'Dataset {name} is not implemented')
-
-    
-###############################################################################
-# Utilities
-###############################################################################
-
-
-def DATASET_stem_to_file(directory, stem):
-    """Resolve stem to a file in DATASET
-
-    Arguments
-        directory - Path
-            The root directory of the dataset
-        stem - string
-            The stem representing one item in the dataset
-
-    Returns
-        file - Path
-            The corresponding file
-    """
-    # TODO
-    raise NotImplementedError
+def get_parents_from_hierarchy(hierarchy: dict):
+    parents = {}
+    for parent, children in hierarchy.items():
+        for child in children:
+            parents[child] = parent
+    return parents
