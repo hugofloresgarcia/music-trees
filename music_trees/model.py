@@ -5,6 +5,7 @@ from operator import __add__
 import argparse
 import logging
 from collections import OrderedDict
+from typing import List
 
 import pytorch_lightning as pl
 import torch
@@ -84,9 +85,8 @@ class Backbone(nn.Module):
         return x
 
 class ProtoNet(pl.LightningModule):
-    """PyTorch Lightning model definition"""
 
-    def __init__(self, parents: list):
+    def __init__(self, parents: List[List[str]]):
         super().__init__()
         self.save_hyperparameters()
 
@@ -99,15 +99,10 @@ class ProtoNet(pl.LightningModule):
         dummy_out = self.backbone(dummy_input)
         root_d = dummy_out.shape[-1]
 
-        # given a parent node in the hierarchy, there will be 
-        # one linear layer that maps from the backbone embedding
-        # to a smaller embedding
-        parent_d = root_d // len(parents)
-        self.parents = nn.ModuleList([nn.Linear(root_d, parent_d) for name in parents])
+        levels, classifiers = create_sparse_layers(root_d, parents)
+        self.levels = levels
+        self.classifiers = classifiers
         
-        # this fully connected layer will serve as our classifier for the 
-        # parent level
-        self.fc = nn.Linear(parent_d, len(parents))
 
     def _forward(self, x):
         """forward pass through the backbone model, as well as the 
@@ -117,21 +112,28 @@ class ProtoNet(pl.LightningModule):
         # input should be shape (b, c, f, t)
         x = self.backbone(x)
 
-        # now, forward pass through each parent layer
-        # each tensor in this list should be shape (b, e)
-        embeddings = [layer(x) for  layer in self.parents.items()]
+        # go through each layer of experts
+        hierarchical_probs = []
+        for level, classifier in zip(self.levels, self.classifiers):
+            # get the embedding 
+            embedding = [expert(x) for expert in level.values()]
 
-        # concatenate embeddings to make a single feature vector
-        x = torch.cat(embeddings, dim=-1)
+            # concatenate the embedding and get the class probabilities
+            vec = torch.cat(embedding, dim=-1)
 
-        # classify vector
-        probits = self.fc(x) 
+            # forward pass through the classifier
+            probs = classifier(vec)
+            hierarchical_probs.append(probs)
 
-        # use these probits to weigh the embeddings 
-        x = torch.cat([emb * probit for emb, probit in zip(embeddings, probits)], dim=-1)
+            # now, use the class probabilities as weights for each expert embedding
+            embedding = [emb * p for emb, p in zip(embedding, probs)]
+            embedding = torch.cat(embedding, dim=-1)
+
+            # IMPORTANT: x must now become the concatenated embedding vector
+            x = embedding
 
         # return the vector and the probits
-        return x, probits
+        return x, hierarchical_probs
 
     def forward(self, support, query):
         """ 
@@ -271,6 +273,32 @@ class ProtoNet(pl.LightningModule):
         """Configure optimizer for training"""
         return torch.optim.Adam(self.parameters())
 
+def create_sparse_layers(root_d: int, parents: List[List[str]]):
+    current_dim = root_d
+    layers = nn.ModuleList()
+    classifiers = nn.ModuleList()
+
+    for parent_layer in parents:
+        partition_dim = current_dim // len(parents)
+
+        # create a new ModuleDict, where the current sparse layer will reside
+        layer = nn.ModuleDict(OrderedDict(
+            [(name, nn.Linear(current_dim, partition_dim)) for name in parent_layer]
+        ))
+        layers.append(layer)
+        layers_output_dim = len(parent_layer) * partition_dim
+        
+        # create a classifier that will take the output of the sparse layer and
+        # classify it into the list of parents
+        classifier = nn.Linear(layers_output_dim, len(parent_layer))
+        classifiers.append(classifier)
+
+        current_dim = layers_output_dim
+
+    return layers, classifiers
+
+def all_unique(lst: List[str]):
+    return len(lst) == len(set(lst))
 
 if __name__ == "__main__":
 
