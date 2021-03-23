@@ -134,7 +134,7 @@ def glob_all_metadata_entries(root_dir, pattern='**/*.json'):
     pattern = os.path.join(root_dir, pattern)
     filepaths = glob.glob(pattern, recursive=True)
     # metadata = tqdm.contrib.concurrent.process_map(load_yaml, filepaths, max_workers=20, chunksize=20)
-    records = [load_metadata_entry(path) for path in tqdm.tqdm(filepaths)]
+    records = [load_entry(path) for path in tqdm.tqdm(filepaths)]
     return records
 
 """
@@ -148,7 +148,7 @@ def _add_file_format_to_filename(path: str, file_format: str):
         path = Path(path).with_suffix(file_format)
     return str(path)
 
-def save_metadata_entry(entry, path, format='json'):
+def save_entry(entry, path, format='json'):
     os.makedirs(Path(path).parent, exist_ok=True)
     path = _add_file_format_to_filename(path, format)
     if format == 'json':
@@ -158,7 +158,7 @@ def save_metadata_entry(entry, path, format='json'):
         with open(path, 'w') as f:
             yaml.dump(entry, f)
     
-def load_metadata_entry(path, format='json'):
+def load_entry(path, format='json'):
     entry = None
     if format == 'json':
         with open(path, 'r') as f:

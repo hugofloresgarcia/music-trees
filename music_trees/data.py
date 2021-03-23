@@ -13,24 +13,6 @@ import librosa
 import music_trees as mt
 import medleydb as mdb
 
-
-###############################################################################
-# Dataset
-###############################################################################
-
-### NEW PLAN
-# MDB Meta sends out a dict with two keys:
-# support: a dict with structure {classname: AudioSignal}
-# query: same thing
-# maybe add a to_hierarchical_onehot transform that turns the classname key into a 
-# hierarchical onehot.
-# BUT it should also include the parent targets
-
-# then, to transforms
-# transforms.SomeKindOfAugmentation?
-# transforms.STFT and// or Mel if necessary
-# transforms.ToEpisode (takes care of stacking queries and making them tensors ready to be input)
-
 class MDBMeta(torch.utils.data.Dataset):
 
     def __init__(self, partition: str, n_class: int, n_shot: int,
@@ -38,12 +20,9 @@ class MDBMeta(torch.utils.data.Dataset):
                 sample_rate: int = 16000, transform=None):
         super().__init__()
         # load the classlist for this partition
-        self.classes =  mt.utils.data.load_metadata_entry( mt.ASSETS_DIR / 'partition.json', 
+        self.classes =  mt.utils.data.load_entry( mt.ASSETS_DIR / 'partition.json', 
                                                           format='json')[partition]
-
-        # load the parent-child hierarchy so we can grab the parents for each instrument
-        self.hierarchy = mt.utils.data.load_metadata_entry( mt.ASSETS_DIR / 'hierarchy.yaml', format='yaml')
-        self.parents = get_parents_from_hierarchy(self.hierarchy)
+        self.files = self._load_files()
 
         self.n_class = n_class
         self.n_shot = n_shot
@@ -52,13 +31,15 @@ class MDBMeta(torch.utils.data.Dataset):
         self.transform = transform
         self.sample_rate = sample_rate
         self.duration = duration
+    
+    def _load_files(self):
+        files = {}
+        for name in self.classes:
+            files[name] = mdb.get_files_for_instrument(name)
 
     def _get_example_for_class(self, name):
-        files = mdb.get_files_for_instrument(name)
-        breakpoint()
-
         # grab a random file
-        file = random.choice(files)
+        file = random.choice(self.files[name])
 
         # load audio
         signal = AudioSignal(path_to_input_file=file, sample_rate=self.sample_rate).to_mono()
@@ -76,57 +57,9 @@ class MDBMeta(torch.utils.data.Dataset):
         return signal.audio_data
 
     def __getitem__(self, index):
-        # get n_class classes
-        class_subset = list(random.sample(self.classes, self.n_class))
-
-        # grab our support set
-
-        # the grab our support set of audio signals
-        # the final stacked array should have shape (n_class, n_shot, 1, sample)
-        # the labels should have shape (n_class, n_shot)
-        support = []
-        support_targets = []
-        for c in class_subset:
-            shots = np.stack([self._get_example_for_class(c) for _ in range(self.n_shot)])
-            support.append(shots)
-
-            targets = np.array([self._get_parent_label(c)])
-            support_targets.append(targets)
-        support = np.stack(support)            
-        support_targets = np.stack(support_targets)
-        
-        # grab the query set of audio signals
-        # the stacked array should have shape (n_query, 1, sample)
-        # the labels should have shape (n_query)
-        query = []
-        query_targets = []
-        for q in range(self.n_query):
-            # pick a random class from the subset to query
-            c = random.choice(class_subset)
-            query.append(self._get_example_for_class(c))
-            query_targets.append(self._get_parent_label(c))
-            
-        query = np.stack(query)
-        query_targets = np.array(query_targets)
-
-        return {
-            'query': query,
-            'query_targets': query_targets, 
-            'support': support, 
-            'support_targets': support_targets, 
-            'classes': class_subset
-            'index': index,
-        }
-
-    def __len__(self):
-        """Length of the dataset"""
-        return len(self.stems)
-
-
-###############################################################################
-# Data module
-###############################################################################
-
+        #NOTE: __getitem__ should return a single item
+        # and get_episode should return an episode?
+        return
 
 class DataModule(pl.LightningDataModule):
     """PyTorch Lightning data module
@@ -156,13 +89,8 @@ class DataModule(pl.LightningDataModule):
         return loader(self.name, 'valid', self.batch_size, self.num_workers)
 
     def test_dataloader(self):
-        """Retrieve the PyTorch DataLoader for testing"""\
+        """Retrieve the PyTorch DataLoader for testing"""
         return loader(self.name, 'test', self.batch_size, self.num_workers)
-
-
-###############################################################################
-# Data loader
-###############################################################################
 
 def collate_fn(self, batch):
     raise NotImplementedError
@@ -176,10 +104,3 @@ def loader(dataset, partition, batch_size=64, num_workers=None):
         num_workers=os.cpu_count() if num_workers is None else num_workers,
         pin_memory=True,
         collate_fn=collate_fn)
-
-def get_parents_from_hierarchy(hierarchy: dict):
-    parents = {}
-    for parent, children in hierarchy.items():
-        for child in children:
-            parents[child] = parent
-    return parents

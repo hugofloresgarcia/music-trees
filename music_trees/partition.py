@@ -1,7 +1,8 @@
 """partition.py - dataset partitioning"""
 import music_trees as mt
 
-from typing import OrderedDict
+from typing import List
+from collections import OrderedDict
 import argparse
 import json
 import logging
@@ -17,7 +18,6 @@ TEST_SIZE = 0.3
 # because they're too general (horn section) or not an instrument (sampler)
 UNWANTED_CLASSES =  ('Main System', 'fx/processed sound', 'sampler', 'horn section',
                      'string section', 'brass section', 'castanet', 'electronic organ', 'scratches')
-UNWANTED_PARENTS = ('electric', 'other')
 
 # because instrument sections are the same as the instrument, we want them to be considered 
 # as one instrument
@@ -25,8 +25,9 @@ REMAP_CLASSES = {'violin section': 'violin',
                  'viola section': 'viola',
                  'french horn section': 'french horn',
                  'trombone section': 'trombone',
-                'flute section': 'flute', 
-                'clarinet section': 'clarinet'}
+                 'flute section': 'flute', 
+                 'clarinet section': 'clarinet', 
+                 'cello section': 'cello'}
 
 def load_unique_instrument_list():
     # the first thing to do is to partition the MDB track IDs and stem IDs into only the ones we will use.
@@ -46,7 +47,6 @@ def load_unique_instrument_list():
     return instruments
 
 def get_files_for_instrument(instrument: str):
-    # TODO: maybe make this faster? 
     files = list(mdb.get_files_for_instrument(instrument))
     # find out if we have any other files from the remapped section
     for key, val in REMAP_CLASSES.items():
@@ -54,61 +54,95 @@ def get_files_for_instrument(instrument: str):
             files.extend(list(mdb.get_files_for_instrument(key)))
     return files
 
-if __name__ == "__main__":
-    # get the unique list of instruments
-    instruments = load_unique_instrument_list()
+# keep track of each instrument and its list of files
+FILES = {inst: get_files_for_instrument(inst) for inst in load_unique_instrument_list()}
 
-    # we will be using a new taxonomy 
-    taxonomy = mt.utils.data.load_metadata_entry(mt.ASSETS_DIR / 'base-taxonomy.yaml', format='yaml')
+def _flat_split(instruments: List[str], test_size: float):
+    """ split a list of instruments according to given test size"""
 
-    # our redacted hierarchy
-    hierarchy = {}
-    partitions = {'train': [], 'test': []}
-    for parent, subparent_dict in taxonomy.items():
-        if parent in UNWANTED_PARENTS:
-            continue
-        
-        parent_list = []
-        for subparent_name, subparent_list in subparent_dict.items():
-            # only keep the instruments we previously defined
-            subparent_list = [i for i in subparent_list if i in instruments]
-            parent_list.extend(subparent_list)
+    # get a counted subset of the instruments
+    instruments = {inst: len(FILES[inst]) for inst in instruments}
+    instruments = list(OrderedDict(sorted(instruments.items(), key=lambda x: x[1])).keys())
 
-        # sort the parent list by number of examples in descending order
-        counts = ([(instrument, len(get_files_for_instrument(instrument))) for instrument in parent_list])
-        counts = sorted(counts, key=lambda x: x[1])
+    # split the list of leaf nodes according to the test size
+    split_idx = int(round(test_size*len(instruments)))
+    
+    partition = {}
+    partition['train'] = instruments[split_idx:]
+    partition['test'] = instruments[:split_idx]
+    
+    return partition
 
-        # split the list of leaf nodes according to the test size
-        split_idx = int(round(TEST_SIZE*len(counts)))
-        
-        train_subpartition = counts[split_idx:]
-        test_subpartition = counts[:split_idx]
+def _update_partition(this: dict, other: dict):
+    """ given two dicts of lists (this and other), 
+    extends the list of `this` with the contents of `other`
+    NOTE: they must have exactly the same keys or will raise an assertion error
+    NOTE: not done in place (returns a copy of the dict)
+    """
+    this = dict(this)
+    for key in this:
+        assert key in other
+        assert isinstance(this[key], list)
+        assert isinstance(other[key], list)
 
-        print(f'PARENT: {Fore.GREEN}{parent}{Style.RESET_ALL}')
-        print(f'\t TRAIN: {Fore.BLUE}{train_subpartition}{Style.RESET_ALL}')
-        print(f'\t TEST: {Fore.MAGENTA}{test_subpartition}{Style.RESET_ALL}')
+        this[key].extend(other[key])
+    return this
 
-        # remove the counts for the actual partition
-        train_subpartition = [c[0] for c in train_subpartition]
-        test_subpartition = [c[0] for c in test_subpartition]
+def _hierarchical_split(tree: dict, partition: dict, test_size: float):
+    for name, node in tree.items():
+        if isinstance(node, dict):
+            # recurse!
+            local_partition = _hierarchical_split(node, partition, test_size)
+            partition = _update_partition(partition, local_partition)
 
-        partitions['train'].extend(train_subpartition)
-        partitions['test'].extend(test_subpartition)
+        elif isinstance(node, list):
+            # only get the valid instruments
+            breakpoint()
+            node = [inst for inst in node if inst in FILES.keys()]
+            # make the split and update the partitions
+            local_partition = _flat_split(node, test_size)
+            partition = _update_partition(partition, local_partition)
 
-        for instrument in parent_list:
-            if parent not in hierarchy:
-                hierarchy[parent] = []
-            hierarchy[parent].append(instrument)
+    return partition
 
-    logging.info(f'number of training classes: {len(partitions["train"])}')
-    logging.info(f'number of test classes: {len(partitions["test"])}')
+def _pretty_print_hierarchical_split(tree: dict, partition: dict, level: int):
+    for name, node in tree.items():
+        if isinstance(node, dict):
+            print(level * '\t' + f"{name}")
+            _pretty_print_hierarchical_split(node, partition, level+1)
+        elif isinstance(node, list):
+            colors = [Fore.CYAN, Fore.GREEN]
+            local_partition = {}
+            print(level * '\t' + f"{name}")
+
+            for (split, instruments), color in zip(partition.items(), colors): 
+                local_partition[split] = [i for i in instruments if i in node]
+                print(color, end='')
+                print((level+1) * '\t' + f"{local_partition[split]}")
+                print(Style.RESET_ALL, end='')
+
+def hierarchical_split():
+    """ write me
+    should make a 70/30 split
+    at the leaves of a tree
+    """
+    # we will be using a new taxonomy
+    # taxonomy = mt.utils.data.load_entry(
+    #     mt.ASSETS_DIR / 'base-taxonomy.yaml', format='yaml')
+    taxonomy = mdb.INST_TAXONOMY
+
+    partition = {'train': [], 'test': []}
+    partition = _hierarchical_split(taxonomy, partition, TEST_SIZE)
+
+    _pretty_print_hierarchical_split(taxonomy, partition, 0)
+
+    logging.info(f'number of training classes: {len(partition["train"])}')
+    logging.info(f'number of test classes: {len(partition["test"])}')
 
     # save the partitions
     save_path = mt.ASSETS_DIR / 'partition.json'
-    mt.utils.data.save_metadata_entry(partitions, save_path, format='json')
+    mt.utils.data.save_entry(partition, save_path, format='json')
     logging.info(f'saved partition map to {save_path}')
 
-    # save the hierarchy 
-    save_path = mt.ASSETS_DIR / 'hierarchy.json'
-    mt.utils.data.save_metadata_entry(hierarchy, save_path, format='yaml')
-    logging.info(f'saved class hierarchy to {save_path}')
+if __name__ == "__main__":
+    hierarchical_split()

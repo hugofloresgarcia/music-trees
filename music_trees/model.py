@@ -12,18 +12,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-def batch_detach(dict_of_tensors):
-    for k, v in dict_of_tensors.items():
-        if isinstance(v, torch.Tensor):
-            dict_of_tensors[k] = v.detach()
-    return dict_of_tensors
-
-def batch_cpu(dict_of_tensors):
-    for k, v in dict_of_tensors.items():
-        if isinstance(v, torch.Tensor):
-            dict_of_tensors[k] = v.cpu()
-    return dict_of_tensors
-
 batch_detach_cpu = lambda x: batch_cpu(batch_detach(x))
 
 class ConvBlock(nn.Module):
@@ -227,28 +215,18 @@ class ProtoNet(pl.LightningModule):
 
         # grab targets
         proto_targets = batch['targets']
-        parent_targets = self._squash_parent_targets(batch)
 
         # grab predictions
         output = self(support, query)
-        parent_probits = self._squash_parent_probits(output)
 
-        # compute our prototype loss
-        proto_loss = self.criterion(output['distances'], proto_targets)
-        parent_loss = self.criterion(parent_probits, parent_taregets)
+        loss = self.criterion(output['distances'], proto_targets)
 
-        loss = (1 - self.alpha) * proto_loss + self.alpha * parent_loss
-
-        output['proto_loss'] = proto_loss
-        output['parent_loss'] = parent_loss
         output['loss'] = loss
 
         return output
 
     def _log_metrics(self, output, stage='train'):
         self.log(f'loss/{stage}', output['loss'].detach().cpu())
-        self.log(f'proto_loss/{stage}', output['loss'].detach().cpu())
-        self.log(f'parent_loss/{stage}', output['loss'].detach().cpu())
 
     def training_step(self, batch, index):
         """Performs one step of training"""
@@ -269,9 +247,21 @@ class ProtoNet(pl.LightningModule):
         output = batch_detach_cpu(output)
         self._log_metrics(output, stage='test') 
 
-    def configure_optimizer(self):
+    def configure_optimizers(self):
         """Configure optimizer for training"""
         return torch.optim.Adam(self.parameters())
+
+def batch_detach(dict_of_tensors):
+    for k, v in dict_of_tensors.items():
+        if isinstance(v, torch.Tensor):
+            dict_of_tensors[k] = v.detach()
+    return dict_of_tensors
+
+def batch_cpu(dict_of_tensors):
+    for k, v in dict_of_tensors.items():
+        if isinstance(v, torch.Tensor):
+            dict_of_tensors[k] = v.cpu()
+    return dict_of_tensors
 
 def create_sparse_layers(root_d: int, parents: List[List[str]]):
     current_dim = root_d
