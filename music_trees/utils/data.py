@@ -7,85 +7,37 @@ import warnings
 import logging
 import collections
 
+import music_trees as mt
+
 import numpy as np
 import pandas as pd 
 import tqdm
 from sklearn.model_selection import train_test_split
 
 """
-sed utils
+record utils (for records that only contain one event)
 """
-def quantize_ceil(value, numerator, denominator, num_decimals=4, floor_threshold=0.10):
-    ratio = (numerator/denominator)
-    quant = round((value // ratio + 1) * ratio, num_decimals)
-    if quant - value > ((1 - floor_threshold) * ratio):
-        return quant - ratio
-    else: 
-        return quant
+def make_entry(signal, dataset: str, uuid: str, format: str, example_length: float, hop_length: float, 
+               sample_rate: int, label: str, **extra):
+               assert signal.sample_rate == sample_rate
+               
+               return dict(dataset=dataset, uuid=uuid, format=format, example_length=example_length,
+                           hop_length=hop_length, sample_rate=sample_rate, label=label, **extra)
 
-def quantize_floor(value, numerator, denominator, num_decimals=4, ceil_threshold=0.9):
-    ratio = (numerator/denominator)
-    quant = round(value // ratio * ratio, num_decimals)
-    if value - quant > (ceil_threshold * ratio):
-        return quant + ratio
-    else:
-        return quant
+def get_path(entry):
+    """ returns an entry's path without suffix
+    add .wav for audio, .json for metadata
+    """
+    return mt.DATA_DIR / entry['dataset'] / entry['label'] / entry['uuid']
 
-def get_one_hot_matrix(record, classlist: list, resolution: float = 1.0):
-    # get duration from file metadata
-    duration = record['duration']
-    events = record['events']
-
-    # determine the number of bins in the time axis
-    assert duration % resolution == 0, \
-        f'resolution {resolution} is not divisible by audio duration: {duration}'
-    num_time_bins = int(duration // resolution)
-
-    # make an empty matrix shape (time, classes)
-    one_hot = np.zeros((num_time_bins, len(classlist)))
-    time_axis = list(np.arange(0.0, duration+resolution, resolution))
-
-    # get the indices for each label
-    for event in events:
-        start_time = event['start_time']
-        end_time = event['end_time']
-
-        start_idx = time_axis.index(quantize_floor(start_time, duration, duration / resolution))
-
-        ceil = quantize_ceil(end_time, duration, duration / resolution)
-        # truncate to the last bin (determined by the audio duration)
-        # events cant be longer than the length of the track anyway
-        ceil = ceil if ceil < duration else time_axis[-1]
-        end_idx = time_axis.index(ceil)
-
-        label_idx = classlist.index(event['label'])
-
-        # now, index
-        one_hot[start_idx:end_idx, label_idx] = 1
-    
-    return one_hot
-
-"""
-record utils
-"""
 def list_subdir(path):
     return [o for o in os.listdir(path) if os.path.isdir(path / o)]
-
-def get_all_labels(record):
-    """returns a list with all labels present in a 
-    particular entry
-    """
-    labels = list(set([event['label'] for event in record['events']]))
-    return labels
 
 def get_classlist(records):
     """ iterate through records and get the set
         of all labels
     """
-    all_labels = []
-    for entry in records:
-        for event in entry['events']:
-            all_labels.append(event['label'])
+    all_labels = [entry['label'] for entry in records]
     
     classlist = list(set(all_labels))
     classlist.sort()
@@ -94,35 +46,17 @@ def get_classlist(records):
 def get_class_frequencies(records):
     """ 
     """
-    all_labels = []
-    for entry in records:
-        for event in entry['events']:
-            all_labels.append(event['label'])
-    
+    all_labels = [entry['label'] for entry in records]
     counter = collections.Counter(all_labels)
     return dict(counter)
 
 def filter_records_by_class_subset(records, class_subset):
-    subset = [entry for entry in records \
-                    if all([l in class_subset for l in get_all_labels(entry)])]
+    subset = [entry for entry in records if entry['label'] in class_subset]
     return subset
 
 def filter_unwanted_classes(records, unwanted_classlist):
-    subset = [entry for entry in records \
-                if any([l not in unwanted_classlist for l in get_all_labels(entry)])]
+    subset = [entry for entry in records if not entry['label'] in unwanted_classlist]
     return subset
-
-def train_test_split_by_entry_key(records, key='track_id', 
-                                 train_size=0.8, test_size=0.2, seed=42):
-    all_keys = list(set([e[key] for e in records]))
-
-    train_keys, test_keys = train_test_split(all_keys, test_size=test_size, 
-                              train_size=train_size, random_state=seed)
-
-    train_records = [e for e in records if e[key] in train_keys]
-    test_records = [e for e in records if e[key] in test_keys]
-
-    return train_records, test_records
 
 """
 glob

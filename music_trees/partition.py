@@ -17,66 +17,21 @@ import medleydb as mdb
 
 DEPTH = 3
 TEST_SIZE = 0.3
-# these classes do not fit nicely in our hierarchy, either
-# because they're too general (horn section) or not an instrument (sampler)
-UNWANTED_CLASSES =  ('Main System', 'fx/processed sound', 'sampler', 'horn section', 
-                     'string section', 'brass section', 'castanet', 'electronic organ', 'scratches', 'theremin', )
 
-# because instrument sections are the same as the instrument, we want them to be considered 
-# as one instrument
-REMAP_CLASSES = {'violin section': 'violin', 
-                 'viola section': 'viola',
-                 'french horn section': 'french horn',
-                 'trombone section': 'trombone',
-                 'flute section': 'flute', 
-                 'clarinet section': 'clarinet', 
-                 'cello section': 'cello'}
+def populate_tree_with_class_statistics(tree, records):
+    freqs = mt.utils.data.get_class_frequencies(records)
 
-
-def load_unique_instrument_list():
-    # the first thing to do is to partition the MDB track IDs and stem IDs into only the ones we will use.
-    mtracks = mdb.load_all_multitracks(['V1', 'V2'])
-
-    # gather an instrument list
-    instruments = []
-    for mtrack in mtracks:
-        instruments.extend([stem.instrument[0] for stem in mtrack.stems.values() if stem.audio_path is not None])
-
-    instruments = list(set(instruments))
-
-    # filter out classes
-    instruments = [i for i in instruments if i not in UNWANTED_CLASSES and i not in REMAP_CLASSES]
-    logging.info(f'classlist is: {instruments}')
-
-    return instruments
-
-def get_files_for_instrument(instrument: str):
-    files = list(mdb.get_files_for_instrument(instrument))
-    # find out if we have any other files from the remapped section
-    for key, val in REMAP_CLASSES.items():
-        if instrument == val:
-            files.extend(list(mdb.get_files_for_instrument(key)))
-    return files
-
-# keep track of each instrument and its list of files
-if not (mt.ASSETS_DIR / 'mdb-files.json').exists():
-    FILES = {inst: get_files_for_instrument(inst) for inst in load_unique_instrument_list()}
-    mt.utils.data.save_entry(FILES, mt.ASSETS_DIR / 'mdb-files.json')
-else:
-    FILES = mt.utils.data.load_entry(mt.ASSETS_DIR / 'mdb-files.json')
-
-def add_track_information_to_tree(tree):
     for node in tree.expand_tree():
         node = tree[node]
         if tree.is_leaf(node):
-            node.data['n_tracks'] = len(FILES[node.uid])
+            node.data['n_examples'] = freqs[node.uid]
         else:
-            node.data['n_tracks'] = sum([len(FILES[n.uid]) for n in tree.leaves(node.uid)])
+            node.data['n_examples'] = sum([freqs[n.uid] for n in tree.leaves(node.uid)])
 
 def _flat_split(leaves: List[mt.tree.MusicNode], test_size: float):
     """ split a list of instruments according to given test size"""
     
-    leaves = sorted(leaves, key=lambda node: node.data['n_tracks'])
+    leaves = sorted(leaves, key=lambda node: node.data['n_examples'])
 
     # split the list of leaf nodes according to the test size
     split_idx = int(round(test_size*len(leaves)))
@@ -102,7 +57,7 @@ def _update_partition(this: dict, other: dict):
         this[key].extend(other[key])
     return this
 
-def _hierarchical_split(tree: MusicTree, depth: int, test_size=TEST_SIZE):
+def _hierarchical_split(tree: MusicTree, depth: int, test_size):
     # get all nodes at said depth
     nodes = tree.all_nodes_at_depth(depth)
     partition = {'train': [], 'test': []}
@@ -114,70 +69,64 @@ def _hierarchical_split(tree: MusicTree, depth: int, test_size=TEST_SIZE):
 
     return partition
 
-def _prune_tree_to_available_instruments(tree):
-    available = load_unique_instrument_list()
-    all_tags = [n for n in tree.all_nodes()]
-    not_available = [n.uid for n in all_tags if n.uid not in available and tree.is_leaf(n)]
-    tree.remove_by_tags(not_available)
-
-def add_partition_data_to_tree(tree, partition):
-    for split, insts in partition.items():
-        for inst in insts:
-            node = tree.get_node(inst)
-            node.data.update({'partition': split, 'n_tracks': len(FILES[inst])})
-
-def make_partition_subtree(tree: MusicTree, partition: dict, split: str):
+def make_partition_subtree(tree: MusicTree, partition: dict, split: str, records: dict):
     # make a new tree to keep the other one const
     tree = MusicTree(tree=tree, deep=True)
-
-    def in_partition(t, n):
-        return (n.uid in partition[split] and t.is_leaf(n)) or not t.is_leaf(n)
-
-    partition_tree = tree.filter_tree(in_partition)
-    add_track_information_to_tree(partition_tree)
+    partition_tree = tree.fit_to_classlist(partition[split])
+    populate_tree_with_class_statistics(partition_tree, records)
 
     return partition_tree
 
-def hierarchical_split():
-    """ write me
-    should make a 70/30 split
-    at the leaves of a tree
-    """
+def hierarchical_partition(name: str, test_size: float, depth: int):
     taxonomy = mdb.INST_TAXONOMY
     tree = MusicTree.from_taxonomy(taxonomy)
 
     # shorten tree to desired depth
     tree = tree.shorten(DEPTH)
 
+    # make sure the tree is even
+    tree = tree.even_depth()
+
     # prune out unwanted classes
     # remove these two categories we know we don't want
-    tree.remove_by_tags(['other', 'electric'])
-    _prune_tree_to_available_instruments(tree)
+    tree.remove_by_tags(['other'])
 
-    add_track_information_to_tree(tree)
+    # load the records and get the classlist
+    records = mt.utils.data.glob_all_metadata_entries(mt.DATA_DIR / name)
+    classlist = mt.utils.data.get_classlist(records)
 
-    tree = tree.even_depth()
-    partition = _hierarchical_split(tree, depth=DEPTH, test_size=TEST_SIZE)
-    
+    tree.fit_to_classlist(classlist)
+    populate_tree_with_class_statistics(tree, records)
+
+    partition = _hierarchical_split(tree, depth, test_size)
+
     print(Fore.MAGENTA)
     print('TRAIN')
-    train_tree = make_partition_subtree(tree, partition, 'train')
-    train_tree.show(data_property='n_tracks')
+    train_tree = make_partition_subtree(tree, partition, 'train', records)
+    train_tree.show(data_property='n_examples')
     print(Style.RESET_ALL)
 
     print(Fore.CYAN)
     print('TEST')
-    test_tree = make_partition_subtree(tree, partition, 'test')
-    test_tree.show(data_property='n_tracks')
+    test_tree = make_partition_subtree(tree, partition, 'test', records)
+    test_tree.show(data_property='n_examples')
     print(Style.RESET_ALL)
-    
+
     logging.info(f'number of training classes: {len(partition["train"])}')
     logging.info(f'number of test classes: {len(partition["test"])}')
 
     # save the partitions
-    save_path = mt.ASSETS_DIR / 'partition.json'
+    save_path = mt.ASSETS_DIR / name / 'partition.json'
     mt.utils.data.save_entry(partition, save_path, format='json')
     logging.info(f'saved partition map to {save_path}')
 
 if __name__ == "__main__":
-    hierarchical_split()
+    import argparse
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--name', type=str, required=True)
+    parser.add_argument('--test_size', type=float, default=0.3)
+    parser.add_argument('--depth',     type=int, default=2)
+    
+    hierarchical_partition(**vars(parser.parse_args()))

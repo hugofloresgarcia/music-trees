@@ -1,3 +1,4 @@
+""" tree.py - TODO: write desc and fill docstrings """
 from copy import deepcopy
 
 import medleydb as mdb
@@ -82,7 +83,42 @@ class MusicTree(Tree):
         root = this.root
         this._r_make_tree(root, taxonomy)
         return this
-    
+
+    def fit_to_classlist(self, classlist: list):
+        """ 
+        prunes all leaves and from the tree so the only
+        remaining leaves are those in classlist. 
+
+        if a class from `classlist` is not a leaf node in the tree, 
+        raises an error.  
+
+        """
+        # first, assert that we will find the whole classlist
+        # as leaf nodes in the tree
+        leaf_ids = [n.uid for n in self.leaves(self.root)]
+        for name in classlist:
+            if name not in leaf_ids:
+                raise ValueError(f"{name} is missing from the leaves of the tree: {leaf_ids}")
+
+        def _leaves_eq_classlist(classlist):
+            leaf_ids = [n.uid for n in self.leaves(self.root)]
+            leaf_ids.sort()
+
+            classlist = list(classlist)
+            classlist.sort()
+
+            cmpr = [c == l for c, l in zip(classlist, leaf_ids)]
+            return all(cmpr)
+
+        while (not _leaves_eq_classlist(classlist)):
+            # delete all the leaves whose uids are not in classlist
+            leaves = self.leaves(self.root)
+            for node in leaves:
+                if node.uid not in classlist:
+                    self.remove_node(node.uid)
+
+        return self
+            
     def all_nodes_at_depth(self, depth: int):
         """ returns a list of nodes at a given depth 
             if get_shallow_leaves is True, also returns 
