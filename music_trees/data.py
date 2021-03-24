@@ -1,26 +1,35 @@
 """data.py - data loading"""
 
 
-import json
 import os
 import random
+from pathlib import Path
+from collections import OrderedDict
 
 import pytorch_lightning as pl
 import torch
 import numpy as np
 from nussl import AudioSignal
-import librosa
 import music_trees as mt
-import medleydb as mdb
 
-class MDBMeta(torch.utils.data.Dataset):
+class MetaDataset(torch.utils.data.Dataset):
 
-    def __init__(self, partition: str, n_class: int, n_shot: int,
-                n_query: int, duration: float = 0.5, 
-                sample_rate: int = 16000, transform=None):
+    def __init__(self, name: str, partition: str, n_class: int, n_shot: int,
+                n_query: int, transform=None):
+        """pytorch dataset for meta learning. 
+
+        Args:
+            name (str): name of the dataset. Must be a dirname under core.DATA_DIR
+            partition (str): partition. One of 'train', or 'test', or 'validation', as defined in core.ASSETS_DIR / name / 'partition.json'
+            n_class (int): number of classes in episode (n_way)
+            n_shot (int): number of support examples per class
+            n_query (int): number of query example
+            transform ([type], optional): [description]. transform to apply. If none, returns an AudioSignal
+        """
         super().__init__()
         # load the classlist for this partition
-        self.classes =  mt.utils.data.load_entry( mt.ASSETS_DIR / 'partition.json', 
+        self.root = mt.DATA_DIR / name 
+        self.classes =  mt.utils.data.load_entry(mt.ASSETS_DIR / name / 'partition.json', 
                                                           format='json')[partition]
         self.files = self._load_files()
 
@@ -29,39 +38,61 @@ class MDBMeta(torch.utils.data.Dataset):
         self.n_query = n_query
 
         self.transform = transform
-        self.sample_rate = sample_rate
-        self.duration = duration
-    
-    def _load_files(self):
-        files = {}
-        for name in self.classes:
-            files[name] = mdb.get_files_for_instrument(name)
 
-    def _get_example_for_class(self, name):
+    def _load_files(self):
+        records = mt.utils.data.glob_all_metadata_entries(self.root)
+        records = mt.utils.data.filter_records_by_class_subset(records, self.classes)
+        files = {}
+
+        for record in records:
+            if record['label'] not in files:
+                files[record['label']] = []
+            files[record['label']].append(record)
+        
+        assert list(files.keys()) == self.classes,\
+             f"classlist-data mismatch {files.keys()}, {self.classes}"
+            
+        return files
+
+    def _get_example_for_class(self, name: str):
         # grab a random file
-        file = random.choice(self.files[name])
+        entry = dict(random.choice(self.files[name]))
 
         # load audio
-        signal = AudioSignal(path_to_input_file=file, sample_rate=self.sample_rate).to_mono()
+        audio_path = Path(mt.utils.data.get_path(entry)).with_suffix('.wav')
+        signal = AudioSignal(path_to_input_file=audio_path).to_mono(keep_dims=True)
+
+        entry['audio'] = signal
+
+        return entry
+
+    def __getitem__(self, index: int):
+        """returns a dict with format:
+        """
+        subset = random.sample(self.classes, k=self.n_class)
+        subset.sort()
+
+        # grab the support set
+        support = []
+        for name in subset:
+            for _ in range(self.n_shot):
+                support.append(self._get_example_for_class(name))
         
-        # remove silence from the audio data
-        signal.audio_data = np.expand_dims(mt.utils.effects.trim_silence(signal.audio_data), 0)
+        # grab the query set
+        query = []
+        for _ in range(self.n_query):
+            pick = random.choice(subset)
+            query.append(self._get_example_for_class(pick))
 
-        # pick a start point
-        start = random.uniform(0, signal.signal_duration - self.duration)
-        end = start + self.duration
+        episode = {
+            'support': support, 
+            'query': query, 
+            'classes': subset
+        }
+            
+        return episode
 
-        # grab that chunk
-        signal.audio_data = signal[int(start*signal.sample_rate):int(end*signal.sample_rate)]
-
-        return signal.audio_data
-
-    def __getitem__(self, index):
-        #NOTE: __getitem__ should return a single item
-        # and get_episode should return an episode?
-        return
-
-class DataModule(pl.LightningDataModule):
+class MetaDataModule(pl.LightningDataModule):
     """PyTorch Lightning data module
 
     Arguments
@@ -71,26 +102,46 @@ class DataModule(pl.LightningDataModule):
             The size of a batch
         num_workers - int or None
             Number data loading jobs to launch. If None, uses num cpu cores.
+        kwargs: 
+            Any kwargs for MetaDataset. 
     """
 
-    def __init__(self, name, batch_size=64, num_workers=None):
+    def __init__(self, name, batch_size=64, num_workers=None, **kwargs):
         super().__init__()
         self.name = name
         self.batch_size = batch_size
         self.num_workers = num_workers
 
+        self.kwargs = kwargs
+    
+    def setup(self):
+        # load all partitions
+        partition = mt.utils.data.load_entry(mt.ASSETS_DIR / self.name / 'partition.json')
+        splits = list(partition.keys())
+
+        assert 'train' in partition
+
+        self.dataset = MetaDataset(self.name, partition='train', **self.kwargs)
+        
+        if 'val' in partition:
+            self.val_dataset = MetaDataset(self.name, partition='val', **self.kwargs)
+
+        if 'test' in partition:
+            self.test_dataset = MetaDataset(self.name, partition='test', **self.kwargs)
+
     def train_dataloader(self):
         """Retrieve the PyTorch DataLoader for training"""
-        # TODO - second argument must be the name of your train partition
-        return loader(self.name, 'train', self.batch_size, self.num_workers)
+        return loader(self.dataset, 'train', self.batch_size, self.num_workers)
 
     def val_dataloader(self):
         """Retrieve the PyTorch DataLoader for validation"""
-        return loader(self.name, 'valid', self.batch_size, self.num_workers)
+        assert hasattr(self, 'val_dataset')
+        return loader(self.val_dataset, 'validation', self.batch_size, self.num_workers)
 
     def test_dataloader(self):
         """Retrieve the PyTorch DataLoader for testing"""
-        return loader(self.name, 'test', self.batch_size, self.num_workers)
+        assert hasattr(self, 'test__dataset')
+        return loader(self.test_dataset, 'test', self.batch_size, self.num_workers)
 
 def collate_fn(self, batch):
     raise NotImplementedError

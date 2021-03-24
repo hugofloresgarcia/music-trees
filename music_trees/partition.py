@@ -3,20 +3,12 @@ import music_trees as mt
 from music_trees.tree import MusicTree
 
 from typing import List
-from collections import OrderedDict
 import argparse
-import json
 import logging
-import random
-from pathlib import Path
-import copy
 
 from colorama import Fore
 from colorama import Style
 import medleydb as mdb
-
-DEPTH = 3
-TEST_SIZE = 0.3
 
 def populate_tree_with_class_statistics(tree, records):
     freqs = mt.utils.data.get_class_frequencies(records)
@@ -82,7 +74,7 @@ def hierarchical_partition(name: str, test_size: float, depth: int):
     tree = MusicTree.from_taxonomy(taxonomy)
 
     # shorten tree to desired depth
-    tree = tree.shorten(DEPTH)
+    tree = tree.shorten(depth)
 
     # make sure the tree is even
     tree = tree.even_depth()
@@ -125,8 +117,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--name', type=str, required=True)
-    parser.add_argument('--test_size', type=float, default=0.3)
-    parser.add_argument('--depth',     type=int, default=2)
+    parser.add_argument('--name', type=str, required=True,
+        help='name of the dataset to partition. must be a subdir\
+              in core.DATA_DIR')
+
+    parser.add_argument('--test_size', type=float, default=0.3, 
+        help='test size')
+        
+    parser.add_argument('--depth',     type=int, default=2, 
+        help='depth of the tree on which to perform the split')
     
     hierarchical_partition(**vars(parser.parse_args()))
