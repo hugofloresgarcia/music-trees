@@ -74,23 +74,31 @@ class Backbone(nn.Module):
 
 class ProtoNet(pl.LightningModule):
 
-    def __init__(self, parents: List[List[str]]):
+    def __init__(self, learning_rate: float, ):
+        """ flat protonet for now"""
         super().__init__()
         self.save_hyperparameters()
+        self.learning_rate = learning_rate
 
-        self.alpha = torch.tensor(0.2)
+        # self.example_input_array = torch.zeros((1, 1, 128, 199))
         self.backbone = Backbone()
+        backbone_dims = self._get_backbone_shape()
 
-        # do a dummy forward pass through the 
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        parser = parent_parser 
+
+        parser.add_argument('--learning_rate', type=float, default=0.0003,
+                            help='learning rate for training. will be decayed using MultiStepLR')
+
+        return parser
+    
+    def _get_backbone_shape(self):
+        # do a dummy forward pass through the
         # embedding model to get the output shape
-        dummy_input = torch.randn((1, 1, 128, 199))
-        dummy_out = self.backbone(dummy_input)
-        root_d = dummy_out.shape[-1]
-
-        levels, classifiers = create_sparse_layers(root_d, parents)
-        self.levels = levels
-        self.classifiers = classifiers
-        
+        i = torch.randn((1, 1, 128, 199))
+        o = self.backbone(i)
+        return o.shape
 
     def _forward(self, x):
         """forward pass through the backbone model, as well as the 
@@ -100,28 +108,7 @@ class ProtoNet(pl.LightningModule):
         # input should be shape (b, c, f, t)
         x = self.backbone(x)
 
-        # go through each layer of experts
-        hierarchical_probs = []
-        for level, classifier in zip(self.levels, self.classifiers):
-            # get the embedding 
-            embedding = [expert(x) for expert in level.values()]
-
-            # concatenate the embedding and get the class probabilities
-            vec = torch.cat(embedding, dim=-1)
-
-            # forward pass through the classifier
-            probs = classifier(vec)
-            hierarchical_probs.append(probs)
-
-            # now, use the class probabilities as weights for each expert embedding
-            embedding = [emb * p for emb, p in zip(embedding, probs)]
-            embedding = torch.cat(embedding, dim=-1)
-
-            # IMPORTANT: x must now become the concatenated embedding vector
-            x = embedding
-
-        # return the vector and the probits
-        return x, hierarchical_probs
+        return x
 
     def forward(self, support, query):
         """ 
@@ -138,23 +125,23 @@ class ProtoNet(pl.LightningModule):
         assert query.ndim == 5
 
         # get support embeddings and parent probits
-        b_dim, c_dim, k_dim, _, f_dim, t_dim = support.shape()
-        support = support.view(b_dim*c_dim*k_dim, 1, f_dim, t_dim)
-        support, support_probits = self._forward(support)
+        d_batch, d_cls, d_k, _, d_frq, d_t = support.shape
+        support = support.view(d_batch*d_cls*d_k, 1, d_frq, d_t)
+        support = self._forward(support)
         
-        support = support.view(b_dim, c_dim, k_dim, -1) # expand back
-        support_probits = support_probits.view(b_dim, c_dim, k_dim, -1) # expand probits as well
+        support = support.view(d_batch, d_cls, d_k, -1) # expand back
+        # support_probits = support_probits.view(d_batch, d_cls, d_k, -1) # expand probits as well
 
-        # take mean over k_dim to get the prototypes
+        # take mean over d_k to get the prototypes
         prototypes = support.mean(dim=2, keepdim=False)
 
         # get query embeddings
-        b_dim, q_dim, _, f_dim, t_dim = query.shape()
-        query = query.view(b_dim * q_dim, 1, f_dim, t_dim)
-        query, query_probits = self._forward(query)
+        d_batch, q_dim, _, d_frq, d_t = query.shape
+        query = query.view(d_batch * q_dim, 1, d_frq, d_t)
+        query = self._forward(query)
 
-        query = query.view(b_dim, q_dim, -1)
-        query_probits = query_probits.view(b_dim, q_dim, -1)
+        query = query.view(d_batch, q_dim, -1)
+        # query_probits = query_probits.view(d_batch, q_dim, -1)
 
         # by here, query should be shape (b, q, n)
         # and prototypes should be shape (b, c, n)
@@ -164,18 +151,9 @@ class ProtoNet(pl.LightningModule):
         # so that the row vectors are the logits for the classes 
         # for each query, in the batch
         dists = torch.cdist(query, prototypes, p=2)
-
-        return {'distances': dists, 
-                'query_probits': query_probits, 
-                'support_probits': support_probits}
-
-    @staticmethod
-    def add_model_specific_args(parent_parser):
-        """Add model hyperparameters as argparse arguments"""
-        parser = argparse.ArgumentParser(parents=[parent_parser], add_help=False)
-        # TODO - add hyperparameters as command-line args using
-        #        parser.add_argument()
-        return parser
+        return {'distances': dists, }
+                # 'query_probits': query_probits, 
+                # 'support_probits': support_probits}
 
     @staticmethod
     def criterion(ypred, ytrue):
@@ -214,19 +192,33 @@ class ProtoNet(pl.LightningModule):
         query = batch['query']
 
         # grab targets
-        proto_targets = batch['targets']
+        proto_targets = batch['target']
 
         # grab predictions
         output = self(support, query)
 
         loss = self.criterion(output['distances'], proto_targets)
 
+        output['pred'] = torch.argmax(output['distances'], dim=-1, keepdim=False)
         output['loss'] = loss
+
+        output.update(batch)
 
         return output
 
     def _log_metrics(self, output, stage='train'):
         self.log(f'loss/{stage}', output['loss'].detach().cpu())
+
+        # prepare predictions and targets
+        pred = output['pred'].view(-1)
+        target = output['target'].view(-1)
+
+        breakpoint()
+        from pytorch_lightning.metrics.functional import accuracy,\
+                                                     f_beta, auroc
+        self.log(f'accuracy/{stage}', accuracy(pred, target))
+        self.log(f'f1/{stage}', f_beta(pred, target, beta=1))
+        self.log(f'auroc/{stage}', auroc(pred, target))
 
     def training_step(self, batch, index):
         """Performs one step of training"""
@@ -249,7 +241,19 @@ class ProtoNet(pl.LightningModule):
 
     def configure_optimizers(self):
         """Configure optimizer for training"""
-        return torch.optim.Adam(self.parameters())
+        optimizer = torch.optim.Adam(
+            # add this lambda so it doesn't crash if part of the model is frozen
+            filter(lambda p: p.requires_grad, self.parameters()),
+            lr=self.learning_rate,
+            weight_decay=1e-5)
+        # scheduler = {
+        #     'scheduler': torch.optim.lr_scheduler.MultiStepLR(
+        #         optimizer,
+        #         milestones=[0.5 * self.max_epochs,
+        #                     0.75 * self.max_epochs],
+        #         gamma=0.1)
+        # }
+        return [optimizer]#, [scheduler]
 
 def batch_detach(dict_of_tensors):
     for k, v in dict_of_tensors.items():
@@ -291,6 +295,5 @@ def all_unique(lst: List[str]):
     return len(lst) == len(set(lst))
 
 if __name__ == "__main__":
-
     model = ProtoNet(parents=['strings', 'winds', 'percussion', 'electric'])
     logging.info(model)

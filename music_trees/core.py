@@ -4,6 +4,7 @@ from pathlib import Path
 import logging
 
 import pytorch_lightning as pl
+import nussl
 
 ###############################################################################
 # Constants
@@ -12,11 +13,14 @@ import pytorch_lightning as pl
 
 # Static directories
 ASSETS_DIR = Path(__file__).parent / 'assets'
-CACHE_DIR = Path(__file__).parent.parent / 'cache'
-DATA_DIR = Path(__file__).parent.parent / 'data'
+ROOT_DIR = Path(__file__).parent.parent
+CACHE_DIR = ROOT_DIR / 'cache'
+DATA_DIR = ROOT_DIR / 'data'
+RUNS_DIR = ROOT_DIR / 'runs'
 
 SEED = 42
 pl.seed_everything(SEED)
+nussl.utils.seed(SEED)
 
 logging.basicConfig(
     format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',

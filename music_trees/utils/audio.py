@@ -47,7 +47,7 @@ def window(signal: AudioSignal, window_len: int = 48000, hop_len: int = 4800):
     _check_audio_types(audio)
     # determine how many window_len windows we can get out of the audio array
     # use ceil because we can zero pad
-    n_chunks = int(np.ceil(audio.shape[-1]/(window_len)))
+    n_chunks = audio.shape[-1] // window_len
     start_idxs = np.arange(0, n_chunks * window_len, hop_len)
 
     windows = []
@@ -69,6 +69,7 @@ def window(signal: AudioSignal, window_len: int = 48000, hop_len: int = 4800):
     for window in windows:
         signal = copy.deepcopy(empty_sentinel)
         signal.audio_data = window
+        assert signal.has_data, "internal error during windowing"
         signals.append(signal)
 
     return signals

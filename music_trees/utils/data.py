@@ -3,6 +3,7 @@ import json
 import glob
 import yaml
 from pathlib import Path
+from typing import List
 import warnings
 import logging
 import collections
@@ -12,6 +13,7 @@ import music_trees as mt
 import numpy as np
 import pandas as pd 
 import tqdm
+from tqdm.contrib.concurrent import process_map
 from sklearn.model_selection import train_test_split
 
 """
@@ -43,6 +45,12 @@ def get_classlist(records):
     classlist.sort()
     return classlist
 
+def get_one_hot(label: str, classes: List[str]):
+    if label not in classes:
+        raise ValueError(f"{label} is not in {classes}")
+    
+    return np.array([1 if label == c else 0 for c in classes])
+
 def get_class_frequencies(records):
     """ 
     """
@@ -69,6 +77,7 @@ def glob_all_metadata_entries(root_dir, pattern='**/*.json'):
     filepaths = glob.glob(pattern, recursive=True)
     # metadata = tqdm.contrib.concurrent.process_map(load_yaml, filepaths, max_workers=20, chunksize=20)
     records = [load_entry(path) for path in tqdm.tqdm(filepaths)]
+    # records = process_map(load_entry, filepaths,)
     return records
 
 """

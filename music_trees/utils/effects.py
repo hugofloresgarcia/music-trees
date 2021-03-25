@@ -39,6 +39,11 @@ def augment_from_array_to_array(audio, sr, effect_chain=None):
     # print(tfm_audio.shape)
     return tfm_audio, effect_params
 
+def augment_from_audio_signal(signal, effect_chain=None):
+    signal.audio_data = augment_from_array_to_array(signal.audio_data, 
+                                    signal.sample_rate, effect_chain)
+    return signal
+
 def trim_silence(audio, sr, min_silence_duration=0.3):
     """ trim silence from audio array using sox
     """

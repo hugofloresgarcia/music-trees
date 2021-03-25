@@ -93,6 +93,8 @@ def generate_medleydb_data(name: str, example_length: float,
             'track': Path(r['path']).stem
         })
 
+    # for r in file_records:
+    #     _generate_records_from_file(r)
     # do the magic
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -129,7 +131,9 @@ def _generate_records_from_file(item: dict):
         output_path = mt.utils.data.get_path(entry)
         output_path.parent.mkdir(exist_ok=True)
 
-        sig.write_audio_to_file(output_path.with_suffix('.wav'))
+        assert signal.has_data, f"attemped to write an empty audio_file: {entry}"
+        sig.write_audio_to_file(output_path.with_suffix('.wav'), 
+                                sample_rate=entry['sample_rate'])
         mt.utils.data.save_entry(entry, output_path.with_suffix('.json'))
 
 if __name__ == "__main__":
@@ -140,7 +144,7 @@ if __name__ == "__main__":
     parser.add_argument('--name', type=str, required=True)
     parser.add_argument('--example_length', type=float, default=0.5)
     parser.add_argument('--hop_length', type=float, default=0.125)
-    parser.add_argument('--sample_rate', type=float, default=16000)
+    parser.add_argument('--sample_rate', type=int, default=16000)
 
     args = parser.parse_args()
 

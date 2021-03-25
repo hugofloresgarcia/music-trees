@@ -31,6 +31,7 @@ class MetaDataset(torch.utils.data.Dataset):
         self.root = mt.DATA_DIR / name 
         self.classes =  mt.utils.data.load_entry(mt.ASSETS_DIR / name / 'partition.json', 
                                                           format='json')[partition]
+        self.classes.sort()
         self.files = self._load_files()
 
         self.n_class = n_class
@@ -38,17 +39,21 @@ class MetaDataset(torch.utils.data.Dataset):
         self.n_query = n_query
 
         self.transform = transform
+    
+    def __len__(self):
+        """ the sum of all available clips, times the number of classes per episode / the number of shots"""
+        return sum([len(entries) for entries in self.files.values()]) * self.n_class // self.n_shot 
 
     def _load_files(self):
-        records = mt.utils.data.glob_all_metadata_entries(self.root)
-        records = mt.utils.data.filter_records_by_class_subset(records, self.classes)
         files = {}
 
-        for record in records:
-            if record['label'] not in files:
-                files[record['label']] = []
-            files[record['label']].append(record)
+        for name in self.classes:
+            records = mt.utils.data.glob_all_metadata_entries(self.root / name)
+            files[name] = records
         
+        # sort by key
+        files = OrderedDict(sorted(files.items(), key=lambda x: x[0]))
+
         assert list(files.keys()) == self.classes,\
              f"classlist-data mismatch {files.keys()}, {self.classes}"
             
@@ -60,7 +65,7 @@ class MetaDataset(torch.utils.data.Dataset):
 
         # load audio
         audio_path = Path(mt.utils.data.get_path(entry)).with_suffix('.wav')
-        signal = AudioSignal(path_to_input_file=audio_path).to_mono(keep_dims=True)
+        signal = AudioSignal(path_to_input_file=str(audio_path)).to_mono(keep_dims=True)
 
         entry['audio'] = signal
 
@@ -68,15 +73,22 @@ class MetaDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index: int):
         """returns a dict with format:
+
+        episode = {
+            'support': List[AudioSignal], 
+            'query': List[AudioSignal], 
+            'classes': List[str],
+        }
         """
         subset = random.sample(self.classes, k=self.n_class)
         subset.sort()
 
         # grab the support set
-        support = []
-        for name in subset:
-            for _ in range(self.n_shot):
-                support.append(self._get_example_for_class(name))
+        support = OrderedDict([
+            (name, [self._get_example_for_class(name)
+                    for _ in range(self.n_shot)])
+            for name in subset
+        ])
         
         # grab the query set
         query = []
@@ -89,6 +101,9 @@ class MetaDataset(torch.utils.data.Dataset):
             'query': query, 
             'classes': subset
         }
+
+        if self.transform is not None:
+            episode = self.transform(episode)
             
         return episode
 
@@ -102,7 +117,7 @@ class MetaDataModule(pl.LightningDataModule):
             The size of a batch
         num_workers - int or None
             Number data loading jobs to launch. If None, uses num cpu cores.
-        kwargs: 
+        **kwargs: 
             Any kwargs for MetaDataset. 
     """
 
@@ -114,7 +129,7 @@ class MetaDataModule(pl.LightningDataModule):
 
         self.kwargs = kwargs
     
-    def setup(self):
+    def setup(self, stage):
         # load all partitions
         partition = mt.utils.data.load_entry(mt.ASSETS_DIR / self.name / 'partition.json')
         splits = list(partition.keys())
@@ -125,9 +140,21 @@ class MetaDataModule(pl.LightningDataModule):
         
         if 'val' in partition:
             self.val_dataset = MetaDataset(self.name, partition='val', **self.kwargs)
+        else:
+            self.val_dataset = MetaDataset(
+                self.name, partition='test', **self.kwargs)
 
         if 'test' in partition:
-            self.test_dataset = MetaDataset(self.name, partition='test', **self.kwargs)
+            pass
+            #self.test_dataset = MetaDataset(self.name, partition='test', **self.kwargs)
+
+
+    @staticmethod
+    def add_argparse_args(parser):
+        parser.add_argument('--dataset', type=str, required=True)
+        parser.add_argument('--batch_size', type=int, default=64)
+        parser.add_argument('--num_workers', type=int, required=False)
+        return parser
 
     def train_dataloader(self):
         """Retrieve the PyTorch DataLoader for training"""
@@ -143,8 +170,26 @@ class MetaDataModule(pl.LightningDataModule):
         assert hasattr(self, 'test__dataset')
         return loader(self.test_dataset, 'test', self.batch_size, self.num_workers)
 
-def collate_fn(self, batch):
-    raise NotImplementedError
+def episode_collate( batch):
+    """ 
+    expect batch to be a list of dicts with numpy arrays
+    will only collate the keys in 
+    """
+    # get the keys we expect
+    keys = batch[0].keys()
+    output = {}
+
+    for key in keys:
+        exmpl = batch[0][key]
+        if isinstance(exmpl, np.ndarray):
+            stack = np.stack(item[key] for item in batch)
+            output[key] = torch.from_numpy(stack)
+        elif isinstance(exmpl, torch.Tensor):
+            output[key] = torch.stack([item[key] for item in batch])
+        else:
+            output[key] = [item[key] for item in batch]
+
+    return output
 
 def loader(dataset, partition, batch_size=64, num_workers=None):
     """Retrieve a data loader"""
@@ -154,4 +199,4 @@ def loader(dataset, partition, batch_size=64, num_workers=None):
         shuffle='train' in partition,
         num_workers=os.cpu_count() if num_workers is None else num_workers,
         pin_memory=True,
-        collate_fn=collate_fn)
+        collate_fn=episode_collate)
