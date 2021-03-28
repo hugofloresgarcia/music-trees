@@ -55,6 +55,7 @@ class MetaDataset(torch.utils.data.Dataset):
         self.classes =  mt.utils.data.load_entry(mt.ASSETS_DIR / name / 'partition.json', 
                                                           format='json')[partition]
         self.classes.sort()
+        self.all_metadata_path = self.root / 'all_files.json'
         self.files = self._load_files()
 
         self.n_episodes = n_episodes
@@ -74,31 +75,34 @@ class MetaDataset(torch.utils.data.Dataset):
 
         self.cache_dataset()
 
-        self._debug_episode = None
-        self.debug = True
-
     def __len__(self):
         """ the sum of all available clips, times the number of classes per episode / the number of shots"""
         # return sum([len(entries) for entries in self.files.values()])
         return self.n_episodes
-        
+
     def _load_files(self):
-        files = {}
+        if not self.all_metadata_path.exists():
+            files = {}
 
-        for name in self.classes:
-            records = mt.utils.data.glob_all_metadata_entries(self.root / name)
-            files[name] = records
-        
-        # sort by key
-        files = OrderedDict(sorted(files.items(), key=lambda x: x[0]))
+            for name in self.classes:
+                records = mt.utils.data.glob_all_metadata_entries(self.root / name)
+                files[name] = records
+            
+            # sort by key
+            files = OrderedDict(sorted(files.items(), key=lambda x: x[0]))
 
-        assert list(files.keys()) == self.classes,\
-             f"classlist-data mismatch {files.keys()}, {self.classes}"
+            assert list(files.keys()) == self.classes,\
+                f"classlist-data mismatch {files.keys()}, {self.classes}"
+            
+            mt.utils.data.save_entry(files, self.all_metadata_path, format='json')
+        else:
+            files = mt.utils.data.load_entry(self.all_metadata_path, format='json')
             
         return files
 
     def cache_dataset(self, chunksize=1000):
         logging.info(f'caching dataset...')
+
         with shelve.open(str(self.shelf_path), writeback=True) as shelf:
             # go through all classnames
             for cl, records in self.files.items():
@@ -153,36 +157,31 @@ class MetaDataset(torch.utils.data.Dataset):
             'classes': List[str],
         }
         """
-        if self.debug:
-            if self._debug_episode is not None:
-                return self._debug_episode
-            else:
-                subset = random.sample(self.classes, k=self.n_class)
-                subset.sort()
+        subset = random.sample(self.classes, k=self.n_class)
+        subset.sort()
 
-                # grab the support set
-                support = OrderedDict([
-                    (name, [self._get_example_for_class(name)
-                            for _ in range(self.n_shot)])
-                    for name in subset
-                ])
-                
-                # grab the query set
-                # grab n_query examples per class
-                query = []
-                for pick in subset:
-                    for _ in range(self.n_query):
-                        query.append(self._get_example_for_class(pick))
+        # grab the support set
+        support = OrderedDict([
+            (name, [self._get_example_for_class(name)
+                    for _ in range(self.n_shot)])
+            for name in subset
+        ])
+        
+        # grab the query set
+        # grab n_query examples per class
+        query = []
+        for pick in subset:
+            for _ in range(self.n_query):
+                query.append(self._get_example_for_class(pick))
 
-                episode = {
-                    'support': support, 
-                    'query': query, 
-                    'classes': subset
-                }
+        episode = {
+            'support': support, 
+            'query': query, 
+            'classes': subset
+        }
 
-                if self.epi_tfm is not None:
-                    episode = self.epi_tfm(episode)
-                self._debug_episode = episode                    
+        if self.epi_tfm is not None:
+            episode = self.epi_tfm(episode)           
         return episode
 
 class MetaDataModule(pl.LightningDataModule):

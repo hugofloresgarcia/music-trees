@@ -8,6 +8,7 @@ import torch
 import music_trees as mt
 
 MAX_EPISODES = 60000
+NUM_VAL_EPISODES = 200
 VAL_CHECK_INTERVAL = 100
 GRAD_CLIP = 1
 
@@ -73,6 +74,7 @@ def train(args):
         precision=16,
         auto_lr_find=True,
         max_steps=MAX_EPISODES,
+        limit_val_batches=NUM_VAL_EPISODES,
         val_check_interval=VAL_CHECK_INTERVAL,
         callbacks=callbacks,
         logger=logger,
