@@ -3,6 +3,7 @@
 and also the convblock and backbone modules
 """
 import music_trees as mt
+from numba.cuda.device_init import Reduce
 
 import tensorflow as tf
 import tensorboard as tb
@@ -215,6 +216,9 @@ class ProtoNet(pl.LightningModule):
 
         output.update(batch)
 
+        # last, add the index for logging
+        output['index'] = index
+
         return output
 
     def _log_metrics(self, output, stage='train'):
@@ -233,8 +237,8 @@ class ProtoNet(pl.LightningModule):
         self.log(f'accuracy/{stage}', accuracy(pred, target))
         self.log(f'f1/{stage}', f1(pred, target, num_classes=num_classes))
 
-        # log a sample episode
-        if stage == 'train':
+        # only do the dim reduction every so often
+        if output['index'] % self.trainer.val_check_interval == 0:
             self.log_single_example(output, stage)
             self.visualize_embedding_space(output, stage)
 
@@ -287,7 +291,7 @@ class ProtoNet(pl.LightningModule):
         
         embeddings = torch.stack(embeddings).detach().cpu().numpy()
         fig = mt.utils.vis.dim_reduce(embeddings, labels, symbols=metatypes, 
-                                n_components=2, method='tsne', title='meta space')
+                                n_components=3, method='tsne', title='tsne - meta space')
         
         output_path = self.exp_dir / 'embeddings' / stage / f'step_{self.global_step}.html'
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -334,7 +338,19 @@ class ProtoNet(pl.LightningModule):
         #                     0.75 * mt.train.MAX_EPOCHS],
         #         gamma=0.1)
         # }
-        return [optimizer]#, [scheduler]
+        from torch.optim.lr_scheduler import ReduceLROnPlateau
+        scheduler = {
+            'scheduler': ReduceLROnPlateau(
+                            optimizer, 
+                            mode='min',
+                            factor=0.5,
+                            patience=100,
+                        ), 
+            'interval': 'step',
+            'frequency': 1, 
+            'monitor': 'loss/train'
+        }
+        return [optimizer], [scheduler]
 
 def batch_detach(dict_of_tensors):
     for k, v in dict_of_tensors.items():

@@ -37,7 +37,7 @@ def slugify(value, allow_unicode=False):
 
 class MetaDataset(torch.utils.data.Dataset):
 
-    def __init__(self, name: str, partition: str, n_class: int, n_shot: int,
+    def __init__(self, name: str, partition: str, n_episodes: int, n_class: int, n_shot: int,
                 n_query: int, audio_tfm=None, epi_tfm=None, clear_cache=False):
         """pytorch dataset for meta learning. 
 
@@ -56,6 +56,8 @@ class MetaDataset(torch.utils.data.Dataset):
                                                           format='json')[partition]
         self.classes.sort()
         self.files = self._load_files()
+
+        self.n_episodes = n_episodes
 
         self.n_class = n_class
         self.n_shot = n_shot
@@ -77,8 +79,9 @@ class MetaDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         """ the sum of all available clips, times the number of classes per episode / the number of shots"""
-        return sum([len(entries) for entries in self.files.values()])
-
+        # return sum([len(entries) for entries in self.files.values()])
+        return self.n_episodes
+        
     def _load_files(self):
         files = {}
 

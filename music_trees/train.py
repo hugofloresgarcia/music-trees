@@ -7,10 +7,11 @@ import torch
 
 import music_trees as mt
 
-MAX_EPOCHS = 100
+MAX_EPISODES = 60000
+VAL_CHECK_INTERVAL = 100
 GRAD_CLIP = 1
 
-N_CLASS = 10
+N_CLASS = 12
 N_SHOT = 5
 N_QUERY = 16
 
@@ -25,6 +26,7 @@ def train(args):
     datamodule = mt.data.MetaDataModule(name=args.dataset,
                                         batch_size=args.batch_size,
                                         num_workers=args.num_workers, 
+                                        n_episodes=MAX_EPISODES,
                                         n_class=N_CLASS, 
                                         n_shot=N_SHOT, 
                                         n_query=N_QUERY,
@@ -70,7 +72,8 @@ def train(args):
         args,
         precision=16,
         auto_lr_find=True,
-        max_epochs=MAX_EPOCHS,
+        max_steps=MAX_EPISODES,
+        val_check_interval=VAL_CHECK_INTERVAL,
         callbacks=callbacks,
         logger=logger,
         terminate_on_nan=True,
