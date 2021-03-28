@@ -7,3 +7,4 @@ from . import preprocess
 from . import model
 from . import partition
 from . import tree
+from . import train

@@ -10,15 +10,15 @@ import music_trees as mt
 MAX_EPOCHS = 100
 GRAD_CLIP = 1
 
-N_CLASS = 12
-N_SHOT = 4
+N_CLASS = 10
+N_SHOT = 5
 N_QUERY = 16
 
 def train(args):
-   
+
     # setup transforms
     audio_tfm = mt.preprocess.LogMelSpec(hop_length=128, win_length=512)
-    episode_tfm = mt.preprocess.EpisodicTransform(audio_tfm, n_class=N_CLASS, 
+    episode_tfm = mt.preprocess.EpisodicTransform(n_class=N_CLASS, 
                                                   n_shot=N_SHOT, n_query=N_QUERY)
 
     # set up data
@@ -27,8 +27,9 @@ def train(args):
                                         num_workers=args.num_workers, 
                                         n_class=N_CLASS, 
                                         n_shot=N_SHOT, 
-                                        n_query=N_QUERY, 
-                                        transform=episode_tfm)
+                                        n_query=N_QUERY,
+                                        audio_tfm=audio_tfm, 
+                                        epi_tfm=episode_tfm)
 
     # set up model
     model = mt.model.ProtoNet(
@@ -39,6 +40,7 @@ def train(args):
     logger = TestTubeLogger(save_dir=mt.RUNS_DIR, name=args.name,
                             version=args.version)
     exp_dir = Path(logger.save_dir) / logger.name / f"version_{logger.experiment.version}"
+    model.exp_dir = exp_dir
 
     # CALLBACKS
     callbacks = []
@@ -48,13 +50,16 @@ def train(args):
     callbacks.append(LearningRateMonitor(logging_interval='step'))
 
     # checkpointing
-    # After training finishes, use :attr:`best_model_path` to retrieve the path to the
-    # best checkpoint file and : attr: `best_model_score` to retrieve its score.
     from pytorch_lightning.callbacks import ModelCheckpoint
     ckpt_callback = ModelCheckpoint(dirpath=exp_dir / 'checkpoints', filename=None,
                                     monitor='loss/val', save_top_k=3, mode='min')
     callbacks.append(ckpt_callback)
 
+    # early stop
+    from pytorch_lightning.callbacks import EarlyStopping
+    callbacks.append(EarlyStopping(monitor='loss/val', mode='min', patience=20))
+    
+    # get the best path to the model if it exists
     if ckpt_callback.best_model_path == '':
         best_model_path = None
     else:
@@ -64,7 +69,7 @@ def train(args):
     trainer = pl.Trainer.from_argparse_args(
         args,
         precision=16,
-        # auto_lr_find=True,
+        auto_lr_find=True,
         max_epochs=MAX_EPOCHS,
         callbacks=callbacks,
         logger=logger,
@@ -72,7 +77,7 @@ def train(args):
         resume_from_checkpoint=best_model_path,
         # weights_summary='full',
         log_gpu_memory=True,
-        gpus=None,#'0' if torch.cuda.is_available() else None,
+        gpus='0' if torch.cuda.is_available() else None,
         profiler=pl.profiler.SimpleProfiler(
             output_filename=exp_dir / 'profiler-report.txt'),
         gradient_clip_val=GRAD_CLIP,

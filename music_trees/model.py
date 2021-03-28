@@ -1,8 +1,15 @@
-"""model.py - model definition"""
+"""model.py - model definition
+#TODO: get the logging and visualization logic outta here
+and also the convblock and backbone modules
+"""
+import music_trees as mt
+
+import tensorflow as tf
+import tensorboard as tb
+tf.io.gfile = tb.compat.tensorflow_stub.io.gfile
 
 from functools import reduce
 from operator import __add__
-import argparse
 import logging
 from collections import OrderedDict
 from typing import List
@@ -151,7 +158,11 @@ class ProtoNet(pl.LightningModule):
         # so that the row vectors are the logits for the classes 
         # for each query, in the batch
         dists = torch.cdist(query, prototypes, p=2)
-        return {'distances': dists, }
+        # breakpoint()
+        return {'distances': -dists, 
+                'support_embedding': support,
+                'query_embedding': query,
+                'prototype_embedding': prototypes}
                 # 'query_probits': query_probits, 
                 # 'support_probits': support_probits}
 
@@ -213,12 +224,82 @@ class ProtoNet(pl.LightningModule):
         pred = output['pred'].view(-1)
         target = output['target'].view(-1)
 
-        breakpoint()
-        from pytorch_lightning.metrics.functional import accuracy,\
-                                                     f_beta, auroc
+        # breakpoint()
+        from pytorch_lightning.metrics.functional import accuracy
+        from pytorch_lightning.metrics.functional.f_beta import f1
+
+        #NOTE: assume a fixed num_classes across episodes
+        num_classes = len(output['classes'][0])
         self.log(f'accuracy/{stage}', accuracy(pred, target))
-        self.log(f'f1/{stage}', f_beta(pred, target, beta=1))
-        self.log(f'auroc/{stage}', auroc(pred, target))
+        self.log(f'f1/{stage}', f1(pred, target, num_classes=num_classes))
+
+        # log a sample episode
+        if stage == 'train':
+            self.log_single_example(output, stage)
+            self.visualize_embedding_space(output, stage)
+
+    def log_single_example(self, output: dict, stage: str):
+        """ logs output vs predictions as a table for a slice of the batch"""
+        idx = 0
+        # class index to class name
+        gc = lambda i: output['classes'][idx][i]
+
+        example  = f"# Episode \n"
+        example += f"\tclasslist: {output['classes'][idx]}\n\n"
+        example += f"\t{'prediction':<45}{'target':<45}\n\n"
+
+        # example += f"```\n"
+        for p, t in zip(output['pred'][idx], 
+                        output['target'][idx]):
+            example += f"\t{gc(p):<35}{gc(t):<35}\n"
+        # example += f"```\n"
+
+        self.logger.experiment.add_text(f'example/{stage}', example, self.global_step)
+
+    def visualize_embedding_space(self, output: dict, stage: str):
+        """ visualizes the embedding space for 1 piece of the batch """
+        idx = 0
+        # class index to class name
+        gc = lambda i: output['classes'][idx][i]
+
+        embeddings = []
+        labels = []
+        metatypes = []
+        
+        # grab the query set first
+        for q_emb, label in zip(output['query_embedding'][idx], output['target'][idx]):
+            embeddings.append(q_emb)
+            labels.append(gc(label))
+            metatypes.append('query')
+        
+        # grab the support set now
+        for class_set, class_label_group in zip(output['support_embedding'][idx], output['support_target'][idx]):
+            for s_emb, label in zip(class_set, class_label_group):
+                embeddings.append(s_emb)
+                labels.append(gc(label))
+                metatypes.append('support')
+        
+        # grab the prototypes now
+        for p_emb, label in zip(output['prototype_embedding'][idx], output['classes'][idx]):
+            embeddings.append(p_emb)
+            labels.append(label)
+            metatypes.append('proto')
+        
+        embeddings = torch.stack(embeddings).detach().cpu().numpy()
+        fig = mt.utils.vis.dim_reduce(embeddings, labels, symbols=metatypes, 
+                                n_components=2, method='tsne', title='meta space')
+        
+        output_path = self.exp_dir / 'embeddings' / stage / f'step_{self.global_step}.html'
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        fig.write_html(str(output_path))
+
+        # fig = mt.utils.vis.plotly_fig2array(fig)
+        # breakpoint()
+
+        # fig.write_html('test.html')
+        # import test_tube
+        # test_tube.Experiment.add_embedding()
+        # self.logger.experiment.add_embedding(embeddings, global_step=self.global_step, metadata=labels)
 
     def training_step(self, batch, index):
         """Performs one step of training"""
@@ -249,8 +330,8 @@ class ProtoNet(pl.LightningModule):
         # scheduler = {
         #     'scheduler': torch.optim.lr_scheduler.MultiStepLR(
         #         optimizer,
-        #         milestones=[0.5 * self.max_epochs,
-        #                     0.75 * self.max_epochs],
+        #         milestones=[0.5 * mt.train.MAX_EPOCHS,
+        #                     0.75 * mt.train.MAX_EPOCHS],
         #         gamma=0.1)
         # }
         return [optimizer]#, [scheduler]

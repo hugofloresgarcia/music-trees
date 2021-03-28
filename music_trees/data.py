@@ -3,6 +3,7 @@
 
 import os
 import random
+import logging
 from pathlib import Path
 from collections import OrderedDict
 
@@ -11,11 +12,33 @@ import torch
 import numpy as np
 from nussl import AudioSignal
 import music_trees as mt
+import shelve
+import tqdm
+
+import unicodedata
+import re
+
+def slugify(value, allow_unicode=False):
+    """
+    Taken from https://github.com/django/django/blob/master/django/utils/text.py
+    Convert to ASCII if 'allow_unicode' is False. Convert spaces or repeated
+    dashes to single dashes. Remove characters that aren't alphanumerics,
+    underscores, or hyphens. Convert to lowercase. Also strip leading and
+    trailing whitespace, dashes, and underscores.
+    """
+    value = str(value)
+    if allow_unicode:
+        value = unicodedata.normalize('NFKC', value)
+    else:
+        value = unicodedata.normalize('NFKD', value).encode(
+            'ascii', 'ignore').decode('ascii')
+    value = re.sub(r'[^\w\s-]', '', value.lower())
+    return re.sub(r'[-\s]+', '-', value).strip('-_')
 
 class MetaDataset(torch.utils.data.Dataset):
 
     def __init__(self, name: str, partition: str, n_class: int, n_shot: int,
-                n_query: int, transform=None):
+                n_query: int, audio_tfm=None, epi_tfm=None, clear_cache=False):
         """pytorch dataset for meta learning. 
 
         Args:
@@ -38,11 +61,23 @@ class MetaDataset(torch.utils.data.Dataset):
         self.n_shot = n_shot
         self.n_query = n_query
 
-        self.transform = transform
-    
+        self.audio_tfm = audio_tfm
+        self.epi_tfm = epi_tfm
+
+        self.shelf_path = Path(mt.CACHE_DIR / name / partition / 'cache').with_suffix('.pag')
+        self.shelf_path.parent.mkdir(exist_ok=True, parents=True)
+        if self.shelf_path.exists() and clear_cache:
+            logging.warn(f'clear_cache = True and cache exists. clearing {self.shelf_path}')
+            os.remove(self.shelf_path)
+
+        self.cache_dataset()
+
+        self._debug_episode = None
+        self.debug = True
+
     def __len__(self):
         """ the sum of all available clips, times the number of classes per episode / the number of shots"""
-        return sum([len(entries) for entries in self.files.values()]) * self.n_class // self.n_shot 
+        return sum([len(entries) for entries in self.files.values()])
 
     def _load_files(self):
         files = {}
@@ -59,15 +94,50 @@ class MetaDataset(torch.utils.data.Dataset):
             
         return files
 
+    def cache_dataset(self, chunksize=1000):
+        logging.info(f'caching dataset...')
+        with shelve.open(str(self.shelf_path), writeback=True) as shelf:
+            # go through all classnames
+            for cl, records in self.files.items():
+                for i, entry in tqdm.tqdm(list(enumerate(records))):
+                # all files belonging to a class
+                    self.cache_if_needed(shelf, entry)
+                    if i % chunksize:
+                        shelf.sync()
+
+    def cache_if_needed(self, shelf, entry: dict):
+        if entry['uuid'] in shelf:
+            cached_entry = shelf[entry['uuid']]
+        else:
+            cached_entry = self.transform_entry(entry)
+            shelf[entry['uuid']] = cached_entry
+        return cached_entry
+
+    def transform_entry(self, entry: dict):
+        # load audio
+        audio_path = Path(mt.utils.data.get_path(entry)).with_suffix('.wav')
+        signal = AudioSignal(path_to_input_file=str(
+            audio_path)).to_mono(keep_dims=True)
+
+        entry['audio'] = signal
+
+        if self.audio_tfm is not None:
+            entry = self.audio_tfm(entry)
+        return entry
+
+    def process_entry(self, entry: dict):
+        # no need to open the shelf in this case
+        if self.audio_tfm is None:
+            return entry
+
+        with shelve.open(str(self.shelf_path), writeback=False) as shelf:
+            cached_entry = self.cache_if_needed(shelf, entry)
+        return cached_entry
+
     def _get_example_for_class(self, name: str):
         # grab a random file
         entry = dict(random.choice(self.files[name]))
-
-        # load audio
-        audio_path = Path(mt.utils.data.get_path(entry)).with_suffix('.wav')
-        signal = AudioSignal(path_to_input_file=str(audio_path)).to_mono(keep_dims=True)
-
-        entry['audio'] = signal
+        entry = self.process_entry(entry)
 
         return entry
 
@@ -80,31 +150,36 @@ class MetaDataset(torch.utils.data.Dataset):
             'classes': List[str],
         }
         """
-        subset = random.sample(self.classes, k=self.n_class)
-        subset.sort()
+        if self.debug:
+            if self._debug_episode is not None:
+                return self._debug_episode
+            else:
+                subset = random.sample(self.classes, k=self.n_class)
+                subset.sort()
 
-        # grab the support set
-        support = OrderedDict([
-            (name, [self._get_example_for_class(name)
-                    for _ in range(self.n_shot)])
-            for name in subset
-        ])
-        
-        # grab the query set
-        query = []
-        for _ in range(self.n_query):
-            pick = random.choice(subset)
-            query.append(self._get_example_for_class(pick))
+                # grab the support set
+                support = OrderedDict([
+                    (name, [self._get_example_for_class(name)
+                            for _ in range(self.n_shot)])
+                    for name in subset
+                ])
+                
+                # grab the query set
+                # grab n_query examples per class
+                query = []
+                for pick in subset:
+                    for _ in range(self.n_query):
+                        query.append(self._get_example_for_class(pick))
 
-        episode = {
-            'support': support, 
-            'query': query, 
-            'classes': subset
-        }
+                episode = {
+                    'support': support, 
+                    'query': query, 
+                    'classes': subset
+                }
 
-        if self.transform is not None:
-            episode = self.transform(episode)
-            
+                if self.epi_tfm is not None:
+                    episode = self.epi_tfm(episode)
+                self._debug_episode = episode                    
         return episode
 
 class MetaDataModule(pl.LightningDataModule):
@@ -148,7 +223,6 @@ class MetaDataModule(pl.LightningDataModule):
             pass
             #self.test_dataset = MetaDataset(self.name, partition='test', **self.kwargs)
 
-
     @staticmethod
     def add_argparse_args(parser):
         parser.add_argument('--dataset', type=str, required=True)
@@ -170,7 +244,7 @@ class MetaDataModule(pl.LightningDataModule):
         assert hasattr(self, 'test__dataset')
         return loader(self.test_dataset, 'test', self.batch_size, self.num_workers)
 
-def episode_collate( batch):
+def episode_collate(batch):
     """ 
     expect batch to be a list of dicts with numpy arrays
     will only collate the keys in 
@@ -182,7 +256,7 @@ def episode_collate( batch):
     for key in keys:
         exmpl = batch[0][key]
         if isinstance(exmpl, np.ndarray):
-            stack = np.stack(item[key] for item in batch)
+            stack = np.stack([item[key] for item in batch])
             output[key] = torch.from_numpy(stack)
         elif isinstance(exmpl, torch.Tensor):
             output[key] = torch.stack([item[key] for item in batch])
