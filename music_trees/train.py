@@ -8,7 +8,7 @@ import torch
 import music_trees as mt
 
 MAX_EPISODES = 60000
-NUM_VAL_EPISODES = 200
+NUM_VAL_EPISODES = 500
 VAL_CHECK_INTERVAL = 100
 GRAD_CLIP = 1
 

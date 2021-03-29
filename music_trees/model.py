@@ -291,11 +291,12 @@ class ProtoNet(pl.LightningModule):
         
         embeddings = torch.stack(embeddings).detach().cpu().numpy()
         fig = mt.utils.vis.dim_reduce(embeddings, labels, symbols=metatypes, 
-                                n_components=3, method='tsne', title='tsne - meta space')
+                                n_components=2, method='tsne', title='tsne - meta space')
         
-        output_path = self.exp_dir / 'embeddings' / stage / f'step_{self.global_step}.html'
+        output_path = self.exp_dir / 'embeddings' / stage / f'{self.global_step}.json'
         output_path.parent.mkdir(parents=True, exist_ok=True)
-        fig.write_html(str(output_path))
+        # fig.write_html(str(output_path))
+        fig.write_json(str(output_path))
 
         # fig = mt.utils.vis.plotly_fig2array(fig)
         # breakpoint()

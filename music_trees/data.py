@@ -54,7 +54,6 @@ class MetaDataset(torch.utils.data.Dataset):
         self.root = mt.DATA_DIR / name 
         self.files = self._load_files(name, partition)
         self.classes = sorted(list(self.files.keys()))
-        breakpoint()
 
         self.n_episodes = n_episodes
 
@@ -195,9 +194,9 @@ class MetaDataset(torch.utils.data.Dataset):
                 'classes': subset
             }
 
-            self.episode_cache[index] = episode
+            self.episode_cache[index] = dict(episode)
 
-        episode = self._process_episode(episode)
+        episode = dict(self._process_episode(episode))
 
         return episode
 
@@ -238,7 +237,7 @@ class MetaDataModule(pl.LightningDataModule):
                                             **self.kwargs)
         else:
             self.val_dataset = MetaDataset(
-                self.name, partition='test', **self.kwargs)
+                self.name, partition='test', deterministic=True, **self.kwargs)
 
         if 'test' in partition:
             pass
