@@ -38,7 +38,7 @@ def slugify(value, allow_unicode=False):
 class MetaDataset(torch.utils.data.Dataset):
 
     def __init__(self, name: str, partition: str, n_episodes: int, n_class: int, n_shot: int,
-                n_query: int, audio_tfm=None, epi_tfm=None, clear_cache=False):
+                n_query: int, audio_tfm=None, epi_tfm=None, clear_cache=False, deterministic=False):
         """pytorch dataset for meta learning. 
 
         Args:
@@ -52,52 +52,50 @@ class MetaDataset(torch.utils.data.Dataset):
         super().__init__()
         # load the classlist for this partition
         self.root = mt.DATA_DIR / name 
-        self.classes =  mt.utils.data.load_entry(mt.ASSETS_DIR / name / 'partition.json', 
-                                                          format='json')[partition]
-        self.classes.sort()
-        self.all_metadata_path = self.root / 'all_files.json'
-        self.files = self._load_files()
+        self.files = self._load_files(name, partition)
+        self.classes = sorted(list(self.files.keys()))
+        breakpoint()
 
         self.n_episodes = n_episodes
 
-        self.n_class = n_class
+        self.n_class = min(len(self.classes), n_class)
         self.n_shot = n_shot
         self.n_query = n_query
 
         self.audio_tfm = audio_tfm
         self.epi_tfm = epi_tfm
 
-        self.shelf_path = Path(mt.CACHE_DIR / name / partition / 'cache').with_suffix('.pag')
+        cache_name = repr(self.audio_tfm)
+        self.shelf_path = mt.CACHE_DIR / name / cache_name 
         self.shelf_path.parent.mkdir(exist_ok=True, parents=True)
         if self.shelf_path.exists() and clear_cache:
             logging.warn(f'clear_cache = True and cache exists. clearing {self.shelf_path}')
             os.remove(self.shelf_path)
-
-        self.cache_dataset()
+        
+        # cache if needed
+        if not self.shelf_path.with_suffix('.db').exists():
+            self.cache_dataset()
+        
+        # generally, we want to create new episodes
+        # on the fly
+        # however, for validation and evaluation, 
+        # we want the episodes to remain deterministic
+        # so we'll cache the episode metadata here
+        self.deterministic = deterministic
+        self.episode_cache = {}
 
     def __len__(self):
         """ the sum of all available clips, times the number of classes per episode / the number of shots"""
-        # return sum([len(entries) for entries in self.files.values()])
-        return self.n_episodes
-
-    def _load_files(self):
-        if not self.all_metadata_path.exists():
-            files = {}
-
-            for name in self.classes:
-                records = mt.utils.data.glob_all_metadata_entries(self.root / name)
-                files[name] = records
-            
-            # sort by key
-            files = OrderedDict(sorted(files.items(), key=lambda x: x[0]))
-
-            assert list(files.keys()) == self.classes,\
-                f"classlist-data mismatch {files.keys()}, {self.classes}"
-            
-            mt.utils.data.save_entry(files, self.all_metadata_path, format='json')
+        if self.deterministic:
+            return sum([len(entries) for entries in self.files.values()]) * self.n_class // self.n_shot // self.n_query 
         else:
-            files = mt.utils.data.load_entry(self.all_metadata_path, format='json')
-            
+            return self.n_episodes
+
+    def _load_files(self, name: str, partition: str):
+        files = mt.utils.data.load_entry(mt.ASSETS_DIR / name / 'partition.json', 
+                                        format='json')[partition]
+        # sort by key
+        files = OrderedDict(sorted(files.items(), key=lambda x: x[0]))
         return files
 
     def cache_dataset(self, chunksize=1000):
@@ -144,9 +142,23 @@ class MetaDataset(torch.utils.data.Dataset):
     def _get_example_for_class(self, name: str):
         # grab a random file
         entry = dict(random.choice(self.files[name]))
-        entry = self.process_entry(entry)
-
         return entry
+
+    def _process_episode(self, episode):
+        """apply process_item to all items in an episode"""
+        # apply transforms (or pull from cache)
+        for name, lst in episode['support'].items():
+            for i, item in enumerate(lst):
+                episode['support'][name][i] = self.process_entry(item)
+
+        # apply transforms
+        episode['query'] = [self.process_entry(i) for i in episode['query']]
+
+        # apply episode transform
+        if self.epi_tfm is not None:
+            episode = self.epi_tfm(episode)
+
+        return episode      
 
     def __getitem__(self, index: int):
         """returns a dict with format:
@@ -157,31 +169,36 @@ class MetaDataset(torch.utils.data.Dataset):
             'classes': List[str],
         }
         """
-        subset = random.sample(self.classes, k=self.n_class)
-        subset.sort()
+        if self.deterministic and index in self.episode_cache: 
+            episode = self.episode_cache[index]
+        else:
+            subset = random.sample(self.classes, k=self.n_class)
+            subset.sort()
 
-        # grab the support set
-        support = OrderedDict([
-            (name, [self._get_example_for_class(name)
-                    for _ in range(self.n_shot)])
-            for name in subset
-        ])
+            # grab the support set
+            support = OrderedDict([
+                (name, [self._get_example_for_class(name)
+                        for _ in range(self.n_shot)])
+                for name in subset
+            ])
         
-        # grab the query set
-        # grab n_query examples per class
-        query = []
-        for pick in subset:
-            for _ in range(self.n_query):
-                query.append(self._get_example_for_class(pick))
+            # grab the query set
+            # grab n_query examples per class
+            query = []
+            for pick in subset:
+                for _ in range(self.n_query):
+                    query.append(self._get_example_for_class(pick))
 
-        episode = {
-            'support': support, 
-            'query': query, 
-            'classes': subset
-        }
+            episode = {
+                'support': support, 
+                'query': query, 
+                'classes': subset
+            }
 
-        if self.epi_tfm is not None:
-            episode = self.epi_tfm(episode)           
+            self.episode_cache[index] = episode
+
+        episode = self._process_episode(episode)
+
         return episode
 
 class MetaDataModule(pl.LightningDataModule):
@@ -213,10 +230,12 @@ class MetaDataModule(pl.LightningDataModule):
 
         assert 'train' in partition
 
-        self.dataset = MetaDataset(self.name, partition='train', **self.kwargs)
+        self.dataset = MetaDataset(self.name, partition='train', 
+                                   deterministic=False, **self.kwargs)
         
         if 'val' in partition:
-            self.val_dataset = MetaDataset(self.name, partition='val', **self.kwargs)
+            self.val_dataset = MetaDataset(self.name, partition='val', deterministic=True, 
+                                            **self.kwargs)
         else:
             self.val_dataset = MetaDataset(
                 self.name, partition='test', **self.kwargs)

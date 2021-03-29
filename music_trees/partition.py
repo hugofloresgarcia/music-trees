@@ -17,6 +17,7 @@ def populate_tree_with_class_statistics(tree, records):
         node = tree[node]
         if tree.is_leaf(node):
             node.data['n_examples'] = freqs[node.uid]
+            node.data['records'] = mt.utils.data.filter_records_by_class_subset(records, [node.uid])
         else:
             node.data['n_examples'] = sum([freqs[n.uid] for n in tree.leaves(node.uid)])
 
@@ -29,30 +30,30 @@ def _flat_split(leaves: List[mt.tree.MusicNode], test_size: float):
     split_idx = int(round(test_size*len(leaves)))
     
     partition = {}
-    partition['train'] = [l.uid for l in leaves[split_idx:]]
-    partition['test'] = [l.uid for l in leaves[:split_idx]]
+    partition['train'] = {l.uid: l.data['records'] for l in leaves[split_idx:]}
+    partition['test'] = {l.uid: l.data['records'] for l in leaves[:split_idx]}
     
     return partition
 
 def _update_partition(this: dict, other: dict):
-    """ given two dicts of lists (this and other), 
-    extends the list of `this` with the contents of `other`
+    """ given two dicts of dicts (this and other), 
+    extends the dict of `this` with the contents of `other`
     NOTE: they must have exactly the same keys or will raise an assertion error
     NOTE: not done in place (returns a copy of the dict)
     """
     this = dict(this)
     for key in this:
         assert key in other
-        assert isinstance(this[key], list)
-        assert isinstance(other[key], list)
+        assert isinstance(this[key], dict)
+        assert isinstance(other[key], dict)
 
-        this[key].extend(other[key])
+        this[key].update(other[key])
     return this
 
 def _hierarchical_split(tree: MusicTree, depth: int, test_size):
     # get all nodes at said depth
     nodes = tree.all_nodes_at_depth(depth)
-    partition = {'train': [], 'test': []}
+    partition = {'train': {}, 'test': {}}
 
     for node in nodes:
         leaves = [n for n in tree.leaves(node.uid)]

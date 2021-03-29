@@ -4,6 +4,7 @@ from nussl import AudioSignal
 import nussl.datasets.transforms as transforms
 
 import argparse
+from collections import OrderedDict
 
 import torch
 import librosa
@@ -79,6 +80,9 @@ class LogMelSpec:
 
         entry['audio'] = spec
         return entry
+    
+    def __repr__(self):
+        return f'logmel-win{self.win_length}-hop{self.hop_length}'
 
 def _validate_audio_signal(signal: AudioSignal):
     assert isinstance(signal, AudioSignal), \

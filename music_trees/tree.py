@@ -42,7 +42,7 @@ class MusicNode(Node):
         return self.identifier 
 
     def __repr__(self):
-        return f"{self.uid}-{self.data}"
+        return f"{self.uid}-{self.data.keys()}"
 
     # def __deepcopy__(self, memo=None):
     #     # make a deepcopy of self, but give it a new id
