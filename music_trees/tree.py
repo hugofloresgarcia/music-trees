@@ -62,7 +62,7 @@ class MusicTree(Tree):
 
     def depth(self, node=None):
         return super().depth(node) + 1
-    
+
     def create_node(self, uid: str, parent=None):
         return super().create_node(identifier=uid, parent=parent)
 

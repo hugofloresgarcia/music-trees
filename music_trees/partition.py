@@ -21,17 +21,26 @@ def populate_tree_with_class_statistics(tree, records):
         else:
             node.data['n_examples'] = sum([freqs[n.uid] for n in tree.leaves(node.uid)])
 
-def _flat_split(leaves: List[mt.tree.MusicNode], test_size: float):
+def percentage_split(seq, percentages):
+    """https://stackoverflow.com/questions/14280856/separate-a-list-into-four-parts-based-on-percentage-even-if-the-list-is-not-divi"""
+    assert sum(percentages) == 1.0
+    prv = 0
+    size = len(seq)
+    cum_percentage = 0
+    for p in percentages:
+        cum_percentage += p
+        nxt = int(cum_percentage * size)
+        yield seq[prv:nxt]
+        prv = nxt
+
+def _flat_split(leaves: List[mt.tree.MusicNode], partitions, sizes):
     """ split a list of instruments according to given test size"""
     
     leaves = sorted(leaves, key=lambda node: node.data['n_examples'])
 
-    # split the list of leaf nodes according to the test size
-    split_idx = int(round(test_size*len(leaves)))
-    
     partition = {}
-    partition['train'] = {l.uid: l.data['records'] for l in leaves[split_idx:]}
-    partition['test'] = {l.uid: l.data['records'] for l in leaves[:split_idx]}
+    for key, split in zip(partitions, percentage_split(leaves, sizes)):
+        partition[key] = {l.uid: l.data['records'] for l in split} 
     
     return partition
 
@@ -50,14 +59,14 @@ def _update_partition(this: dict, other: dict):
         this[key].update(other[key])
     return this
 
-def _hierarchical_split(tree: MusicTree, depth: int, test_size):
+def _hierarchical_split(tree: MusicTree, depth: int, partitions, sizes):
     # get all nodes at said depth
     nodes = tree.all_nodes_at_depth(depth)
-    partition = {'train': {}, 'test': {}}
+    partition = {p: {} for p in partitions}
 
     for node in nodes:
         leaves = [n for n in tree.leaves(node.uid)]
-        local_partition = _flat_split(leaves, test_size=test_size)
+        local_partition = _flat_split(leaves, partitions, sizes)
         partition = _update_partition(partition, local_partition)
 
     return partition
@@ -70,8 +79,21 @@ def make_partition_subtree(tree: MusicTree, partition: dict, split: str, records
 
     return partition_tree
 
-def hierarchical_partition(name: str, test_size: float, depth: int):
-    taxonomy = mdb.INST_TAXONOMY
+def display_partition_subtrees(tree, partition, records):
+    colors = [Fore.MAGENTA, Fore.CYAN, Fore.GREEN, Fore.BLUE]
+
+    for name in partition:
+        print(colors.pop(-1))
+        print(name.upper())
+        ptree = make_partition_subtree(tree, partition, name, records)
+        ptree.show(data_property='n_examples')
+        print(Style.RESET_ALL)
+
+        logging.info(f'number of {name} classes: {len(partition[name])}')
+
+def hierarchical_partition(taxonomy: str, name: str, partitions: List[str], 
+                          sizes: List[float], depth: int):
+    taxonomy = mt.utils.data.load_entry(mt.ASSETS_DIR / 'taxonomies' / f'{taxonomy}.yaml', format='yaml')
     tree = MusicTree.from_taxonomy(taxonomy)
 
     # shorten tree to desired depth
@@ -91,22 +113,10 @@ def hierarchical_partition(name: str, test_size: float, depth: int):
     tree.fit_to_classlist(classlist)
     populate_tree_with_class_statistics(tree, records)
 
-    partition = _hierarchical_split(tree, depth, test_size)
+    assert len(partitions) == len(sizes)
+    partition = _hierarchical_split(tree, depth, partitions, sizes)
 
-    print(Fore.MAGENTA)
-    print('TRAIN')
-    train_tree = make_partition_subtree(tree, partition, 'train', records)
-    train_tree.show(data_property='n_examples')
-    print(Style.RESET_ALL)
-
-    print(Fore.CYAN)
-    print('TEST')
-    test_tree = make_partition_subtree(tree, partition, 'test', records)
-    test_tree.show(data_property='n_examples')
-    print(Style.RESET_ALL)
-
-    logging.info(f'number of training classes: {len(partition["train"])}')
-    logging.info(f'number of test classes: {len(partition["test"])}')
+    display_partition_subtrees(tree, partition, records)
 
     # save the partitions
     save_path = mt.ASSETS_DIR / name / 'partition.json'
@@ -118,12 +128,18 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('--taxonomy', type=str, required=True, 
+        help='taxonomy to use for dataset split')
+
     parser.add_argument('--name', type=str, required=True,
         help='name of the dataset to partition. must be a subdir\
               in core.DATA_DIR')
 
-    parser.add_argument('--test_size', type=float, default=0.3, 
-        help='test size')
+    parser.add_argument('--partitions', type=str, required=True, nargs='+',
+        help='name of partitions to create, example: "--partitions train val test"')
+
+    parser.add_argument('--sizes', type=float, required=True, nargs='+',
+        help='proportion of partitions to allocate to each partition, example: "--sizes 0.3 0.5 0.2"')
         
     parser.add_argument('--depth',     type=int, default=2, 
         help='depth of the tree on which to perform the split')
