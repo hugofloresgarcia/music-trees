@@ -82,7 +82,7 @@ class Backbone(nn.Module):
 
 class ProtoNet(pl.LightningModule):
 
-    def __init__(self, learning_rate: float, ):
+    def __init__(self, learning_rate: float):
         """ flat protonet for now"""
         super().__init__()
         self.save_hyperparameters()
@@ -90,7 +90,7 @@ class ProtoNet(pl.LightningModule):
 
         # self.example_input_array = torch.zeros((1, 1, 128, 199))
         self.backbone = Backbone()
-        backbone_dims = self._get_backbone_shape()
+        backbone_dims = self._get_backbone_shape() 
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -240,7 +240,8 @@ class ProtoNet(pl.LightningModule):
         # only do the dim reduction every so often
         if output['index'] % self.trainer.val_check_interval == 0:
             self.log_single_example(output, stage)
-            self.visualize_embedding_space(output, stage)
+            if stage == 'val':
+                self.visualize_embedding_space(output, stage)
 
     def log_single_example(self, output: dict, stage: str):
         """ logs output vs predictions as a table for a slice of the batch"""
@@ -262,6 +263,8 @@ class ProtoNet(pl.LightningModule):
 
     def visualize_embedding_space(self, output: dict, stage: str):
         """ visualizes the embedding space for 1 piece of the batch """
+        if not hasattr(self, 'emb_logger'): 
+            return
         idx = 0
         # class index to class name
         gc = lambda i: output['classes'][idx][i]
@@ -269,42 +272,37 @@ class ProtoNet(pl.LightningModule):
         embeddings = []
         labels = []
         metatypes = []
+        audio_paths = []
         
         # grab the query set first
-        for q_emb, label in zip(output['query_embedding'][idx], output['target'][idx]):
+        for q_emb, label, path in zip(output['query_embedding'][idx], 
+                                output['target'][idx],
+                                output['query_paths'][idx]):
             embeddings.append(q_emb)
             labels.append(gc(label))
             metatypes.append('query')
+            audio_paths.append(path)
         
         # grab the support set now
-        for class_set, class_label_group in zip(output['support_embedding'][idx], output['support_target'][idx]):
-            for s_emb, label in zip(class_set, class_label_group):
+        for class_set, class_label_group, class_path_group in zip(output['support_embedding'][idx],
+                                                                  output['support_target'][idx],
+                                                                  output['support_paths'][idx]):
+            for s_emb, label, path in zip(class_set, class_label_group, class_path_group):
                 embeddings.append(s_emb)
                 labels.append(gc(label))
                 metatypes.append('support')
+                audio_paths.append(path)
         
         # grab the prototypes now
         for p_emb, label in zip(output['prototype_embedding'][idx], output['classes'][idx]):
             embeddings.append(p_emb)
             labels.append(label)
             metatypes.append('proto')
+            audio_paths.append(None)
         
         embeddings = torch.stack(embeddings).detach().cpu().numpy()
-        fig = mt.utils.vis.dim_reduce(embeddings, labels, symbols=metatypes, 
-                                n_components=2, method='tsne', title='tsne - meta space')
-        
-        output_path = self.exp_dir / 'embeddings' / stage / f'{self.global_step}.json'
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        # fig.write_html(str(output_path))
-        fig.write_json(str(output_path))
-
-        # fig = mt.utils.vis.plotly_fig2array(fig)
-        # breakpoint()
-
-        # fig.write_html('test.html')
-        # import test_tube
-        # test_tube.Experiment.add_embedding()
-        # self.logger.experiment.add_embedding(embeddings, global_step=self.global_step, metadata=labels)
+        self.emb_logger.add_step(step_key=str(self.global_step), embeddings=embeddings, symbols=metatypes,
+                                 labels=labels, metadata={'audio_path': audio_paths}, title='meta space')
 
     def training_step(self, batch, index):
         """Performs one step of training"""

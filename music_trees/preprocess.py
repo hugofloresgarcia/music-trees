@@ -30,18 +30,23 @@ class EpisodicTransform:
         # process support set
         support = []
         support_target = []
+        support_paths = []
         for name, examples in episode['support'].items():
             class_support = np.stack([e['audio'] for e in examples])
             cls_support_target = np.stack([np.argmax(get_one_hot(e['label'], classlist), axis=0) for e in examples])
+            paths = [e['audio_path'] for e in examples]
             
             support.append(class_support)
             support_target.append(cls_support_target)
+            support_paths.append(paths)
 
         episode['support'] = np.stack(support)
         episode['support_target'] = np.stack(support_target)
+        episode['support_paths'] = support_paths
 
         # process query set
         episode['target'] = np.stack([np.argmax(get_one_hot(e['label'], classlist), axis=0) for e in episode['query']])
+        episode['query_paths'] = [e['audio_path'] for e in episode['query']]
         episode['query'] = np.stack([e['audio'] for e in episode['query']])
 
         return episode

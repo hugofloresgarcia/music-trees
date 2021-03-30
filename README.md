@@ -29,12 +29,14 @@ DATASET`. All preprocessed data is saved in `cache/DATASET`.
 
 ### Train
 
-Complete all TODOs in `data.py` and `model.py`. Then, create a directory in
-`runs` for your experiment. Logs, checkpoints, and results should be saved to
-this directory. In your new directory, run `python -m NAME.train --dataset
-DATASET <args>`. See the [PyTorch Lightning trainer flags](https://pytorch-lightning.readthedocs.io/en/stable/trainer.html#trainer-flags)
-for additional arguments.
-
+```bash 
+export CUDA_VISIBLE_DEVICES='' && \
+python music_trees/train.py \
+    --name baseline-mdb \
+    --batch_size 2 \
+    --num_workers 20 \
+    --learning_rate 0.03 \ 
+```
 
 ### Evaluate
 

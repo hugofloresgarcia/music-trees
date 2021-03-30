@@ -1,11 +1,12 @@
 """train.py - model training"""
+import music_trees as mt
+from embedding_viz.logger import EmbeddingSpaceLogger
+
 import argparse
 from pathlib import Path
 
 import pytorch_lightning as pl
 import torch
-
-import music_trees as mt
 
 MAX_EPISODES = 60000
 NUM_VAL_EPISODES = 500
@@ -44,6 +45,10 @@ def train(args):
                             version=args.version)
     exp_dir = Path(logger.save_dir) / logger.name / f"version_{logger.experiment.version}"
     model.exp_dir = exp_dir
+
+    emb_logger = EmbeddingSpaceLogger(exp_dir / 'embeddings', n_components=2, 
+                                      method='tsne')
+    model.emb_logger = emb_logger
 
     # CALLBACKS
     callbacks = []

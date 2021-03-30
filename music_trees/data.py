@@ -115,6 +115,9 @@ class MetaDataset(torch.utils.data.Dataset):
         else:
             cached_entry = self.transform_entry(entry)
             shelf[entry['uuid']] = cached_entry
+        
+        cached_entry['audio_path'] = str(Path(
+            mt.utils.data.get_path(cached_entry)).with_suffix('.wav').absolute())
         return cached_entry
 
     def transform_entry(self, entry: dict):
