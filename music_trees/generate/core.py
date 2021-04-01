@@ -1,19 +1,90 @@
-from music_trees.generate.katunog import generate_katunog_data
-from music_trees.generate.mdb import generate_medleydb_data
+import music_trees as mt
+from copy import deepcopy
 
-if __name__ == "__main__":
-    import argparse
+import re
+import warnings
+from pathlib import Path
+import uuid
+import os
 
-    parser = argparse.ArgumentParser()
+from nussl import AudioSignal
+from tqdm.contrib.concurrent import process_map
 
-    parser.add_argument('--dataset', type=str, required=True, 
-                        help='name of dataset to generate, either mdb or katunog')
-    parser.add_argument('--name', type=str, required=True,
-                        help='output name of generated data')
-    parser.add_argument('--example_length', type=float, default=0.5)
-    parser.add_argument('--hop_length', type=float, default=0.125)
-    parser.add_argument('--sample_rate', type=int, default=16000)
+NUM_AUGMENT_FOLDS = 2
 
-    args = parser.parse_args()
+def _generate_records_from_file(item: dict):
+    """ expects a dict with structure:
+    {
+        'path': path to the audio file
+        'instrument': instrument label
+    }
+    """
+    # load the audio
+    signal = AudioSignal(path_to_input_file=item['path'])
+    signal.resample(item['sample_rate'])
 
-    generate_katunog_data(**vars(args))
+    # remove all silence
+    signal = mt.utils.audio.trim_silence(signal, item['sample_rate'])
+
+    # window signal
+    window_len = int(item['sample_rate'] * item['example_length'])
+    hop_len = int(item['sample_rate'] * item['hop_length'])
+
+    windows = mt.utils.audio.window(signal, window_len, hop_len)
+
+    # augment if necessary
+    if item['augment']:
+        transform = mt.preprocess.RandomEffects()
+        for i in range(NUM_AUGMENT_FOLDS):
+            clips = [transform(sig) for sig in deepcopy(windows)]
+            windows.extend(clips)
+
+    # create and save a new record for each window
+    for sig in windows:
+        extra = dict(item)
+        del extra['path']
+        entry = mt.utils.data.make_entry(sig, uuid=str(uuid.uuid4()), format='wav',
+                                         **extra)
+
+        output_path = mt.utils.data.get_path(entry)
+        output_path.parent.mkdir(exist_ok=True)
+
+        assert signal.has_data, f"attemped to write an empty audio_file: {entry}"
+        sig.write_audio_to_file(output_path.with_suffix('.wav'),
+                                sample_rate=entry['sample_rate'])
+        mt.utils.data.save_entry(entry, output_path.with_suffix('.json'))
+
+def clean(string: str):
+    string = re.sub("[\(\[].*?[\)\]]", "", string)
+    return string.strip().strip("',/\n").lower().replace(' ', '_')
+
+def generate_data(dataset: str, name: str, example_length: float,
+                  augment: bool, hop_length: float, sample_rate: int):
+    # set an output dir
+    output_dir = mt.DATA_DIR / name
+    output_dir.mkdir(exist_ok=False)
+
+    # grab the dict of all files
+    assert dataset in ('mdb', 'katunog')
+    loader_fn = mt.generate.mdb.loader_fn if dataset == 'mdb'\
+         else mt.generate.katunog.loader_fn
+    file_records = loader_fn()
+    # add hop, example, hop, and sample rate data
+    for r in file_records:
+        r.update({
+            'dataset': name,
+            'example_length': example_length,
+            'hop_length': hop_length,
+            'sample_rate': sample_rate,
+            'track': Path(r['path']).stem,
+            'augment': augment,
+        })
+
+    for f in file_records:
+        _generate_records_from_file(f)
+
+    # # do the magic
+    # with warnings.catch_warnings():
+    #     warnings.simplefilter("ignore")
+    #     process_map(_generate_records_from_file, file_records,
+    #                 max_workers=os.cpu_count() // 2)

@@ -27,15 +27,16 @@ Complete all TODOs in `preprocess.py`, then run `python -m NAME.preprocess
 DATASET`. All preprocessed data is saved in `cache/DATASET`.
 
 
-### Train
+### train
 
 ```bash 
-export CUDA_VISIBLE_DEVICES='' && \
-python music_trees/train.py \
-    --name baseline-mdb \
-    --batch_size 2 \
-    --num_workers 20 \
-    --learning_rate 0.03 \ 
+export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py --name baseline-mdb --dataset mdb --batch_size 2  --num_workers 20  --learning_rate 0.03  
+```
+
+### test
+
+```bash 
+export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py --test true --name baseline-mdb --version 1 --dataset katunog --batch_size 2  --num_workers 20  --learning_rate 0.03  
 ```
 
 ### Evaluate

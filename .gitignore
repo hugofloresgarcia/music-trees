@@ -5,6 +5,8 @@ data/*
 !data/.gitkeep
 runs/*
 !runs/.gitkeep
+results/*
+!results/,gitkeep
 
 __pycache__/
 .DS_Store

@@ -40,7 +40,7 @@ def augment_from_array_to_array(audio, sr, effect_chain=None):
     return tfm_audio, effect_params
 
 def augment_from_audio_signal(signal, effect_chain=None):
-    signal.audio_data = augment_from_array_to_array(signal.audio_data, 
+    signal.audio_data, effect_params = augment_from_array_to_array(signal.audio_data, 
                                     signal.sample_rate, effect_chain)
     return signal
 
@@ -119,7 +119,7 @@ def add_effect_with_random_params(tfm, effect_name):
         params = {}
         for filter_num in range(choose([1, 2, 3, 4, 5, 6, 7])): # apply up to 7 filters
             # random log-spaced frequencies between 40 and 20k 
-            octave = choose([2 ** i for i in range(8)])
+            octave = choose([2 ** i for i in range(5)])
             sub_params = dict(
                 frequency=get_randn(mu=60, std=10, min=40, max=80) * octave, 
                 gain_db=get_randn(mu=0, std=6, min=-24, max=24), 
@@ -140,9 +140,9 @@ def add_effect_with_random_params(tfm, effect_name):
             wet_gain=get_randn(mu=0, std=2, min=-3, max=3))
         tfm.reverb(**params)
 
-    elif 'lowpass' == effect_name:
-        params = dict(frequency=get_randn(8000, 2000, min=500, max=12e3))
-        tfm.lowpass(**params)
+    # elif 'lowpass' == effect_name:
+    #     params = dict(frequency=get_randn(8000, 2000, min=500, max=12e3))
+    #     tfm.lowpass(**params)
 
     elif 'chorus' == effect_name:
         params = dict(gain_in=get_randn(0.3, 0.1, 0.1, 0.5), 

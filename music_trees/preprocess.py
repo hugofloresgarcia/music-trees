@@ -58,7 +58,7 @@ class RandomEffects:
     
     def __call__(self, signal: AudioSignal):
         _validate_audio_signal(signal)
-        return mt.utils.augment_from_audio_signal(signal, self.effect_chain)
+        return mt.utils.effects.augment_from_audio_signal(signal, self.effect_chain)
 
 class LogMelSpec:
 

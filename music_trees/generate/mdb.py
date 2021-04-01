@@ -4,13 +4,6 @@ import music_trees as mt
 logging.basicConfig(level=logging.ERROR) # override the config from root
 
 import medleydb as mdb
-from nussl import AudioSignal
-
-from tqdm.contrib.concurrent import process_map
-import uuid
-import warnings
-import os
-from pathlib import Path
 
 # these classes do not fit nicely in our hierarchy, either
 # because they're too general (horn section) or not an instrument (sampler)
@@ -75,77 +68,4 @@ def load_all_filepaths():
     
     return records
 
-def generate_medleydb_data(name: str, example_length: float, 
-                           hop_length: float, sample_rate: int):
-    # set an output dir
-    output_dir = mt.DATA_DIR / name
-    output_dir.mkdir(exist_ok=False)
-
-    # grab the dict of all files
-    file_records = load_all_filepaths()
-    # add hop, example, hop, and sample rate data
-    for r in file_records:
-        r.update({
-            'dataset': name,
-            'example_length': example_length, 
-            'hop_length': hop_length, 
-            'sample_rate': sample_rate,
-            'track': Path(r['path']).stem
-        })
-
-    # for r in file_records:
-    #     _generate_records_from_file(r)
-    # do the magic
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        process_map(_generate_records_from_file, file_records, 
-                    max_workers=os.cpu_count() // 2)
-    
-def _generate_records_from_file(item: dict):
-    """ expects a dict with structure:
-    {
-        'path': path to the audio file
-        'instrument': instrument label
-    }
-    """
-    # load the audio
-    signal = AudioSignal(path_to_input_file=item['path'])
-    signal.resample(item['sample_rate'])
-
-    # remove all silence
-    signal = mt.utils.audio.trim_silence(signal, item['sample_rate'])
-
-    # window signal
-    window_len = int(item['sample_rate'] * item['example_length'])
-    hop_len = int(item['sample_rate'] * item['hop_length'])
-
-    windows = mt.utils.audio.window(signal, window_len, hop_len)
-
-    # create and save a new record for each window
-    for sig in windows:
-        extra = dict(item)
-        del extra['path']
-        entry = mt.utils.data.make_entry(sig, uuid=str(uuid.uuid4()), format='wav', 
-                                         **extra)
-
-        output_path = mt.utils.data.get_path(entry)
-        output_path.parent.mkdir(exist_ok=True)
-
-        assert signal.has_data, f"attemped to write an empty audio_file: {entry}"
-        sig.write_audio_to_file(output_path.with_suffix('.wav'), 
-                                sample_rate=entry['sample_rate'])
-        mt.utils.data.save_entry(entry, output_path.with_suffix('.json'))
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('--name', type=str, required=True)
-    parser.add_argument('--example_length', type=float, default=0.5)
-    parser.add_argument('--hop_length', type=float, default=0.125)
-    parser.add_argument('--sample_rate', type=int, default=16000)
-
-    args = parser.parse_args()
-
-    generate_medleydb_data(**vars(args))
+loader_fn = load_all_filepaths

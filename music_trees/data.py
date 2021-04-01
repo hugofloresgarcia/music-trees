@@ -71,9 +71,7 @@ class MetaDataset(torch.utils.data.Dataset):
             logging.warn(f'clear_cache = True and cache exists. clearing {self.shelf_path}')
             os.remove(self.shelf_path)
         
-        # cache if needed
-        if not self.shelf_path.with_suffix('.db').exists():
-            self.cache_dataset()
+        self.cache_dataset()
         
         # generally, we want to create new episodes
         # on the fly
@@ -217,40 +215,52 @@ class MetaDataModule(pl.LightningDataModule):
             Any kwargs for MetaDataset. 
     """
 
-    def __init__(self, name, batch_size=64, num_workers=None, **kwargs):
+    def __init__(self, name, n_shot: int, n_query: int, n_class: int,
+                 batch_size=64, num_workers=None, **kwargs):
         super().__init__()
         self.name = name
         self.batch_size = batch_size
         self.num_workers = num_workers
 
+        self.n_shot = n_shot
+        self.n_query = n_query
+        self.n_class = n_class
+
         self.kwargs = kwargs
     
-    def setup(self, stage):
+    def setup(self, stage=None):
         # load all partitions
         partition = mt.utils.data.load_entry(mt.ASSETS_DIR / self.name / 'partition.json')
-        splits = list(partition.keys())
 
-        assert 'train' in partition
+        if stage == 'fit':
+            assert 'train' in partition
+            self.dataset = MetaDataset(self.name, partition='train', deterministic=False, 
+                                       n_shot=self.n_shot, n_query=self.n_query, n_class=self.n_class,
+                                       **self.kwargs)
 
-        self.dataset = MetaDataset(self.name, partition='train', 
-                                   deterministic=False, **self.kwargs)
+            if 'val' in partition:
+                self.val_dataset = MetaDataset(self.name, partition='val', deterministic=True, 
+                                               n_shot=self.n_shot, n_query=self.n_query, n_class=self.n_class,
+                                                **self.kwargs)
+            else:
+                self.val_dataset = MetaDataset(self.name, partition='test', deterministic=True,
+                                               n_shot=self.n_shot, n_query=self.n_query, n_class=self.n_class,
+                                               **self.kwargs)
         
-        if 'val' in partition:
-            self.val_dataset = MetaDataset(self.name, partition='val', deterministic=True, 
+        if stage == 'test':
+            self.test_dataset = MetaDataset(self.name, partition='test', deterministic=True,
+                                            n_shot=self.n_shot, n_query=self.n_query, n_class=self.n_class,
                                             **self.kwargs)
-        else:
-            self.val_dataset = MetaDataset(
-                self.name, partition='test', deterministic=True, **self.kwargs)
-
-        if 'test' in partition:
-            pass
-            #self.test_dataset = MetaDataset(self.name, partition='test', **self.kwargs)
 
     @staticmethod
     def add_argparse_args(parser):
         parser.add_argument('--dataset', type=str, required=True)
         parser.add_argument('--batch_size', type=int, default=64)
         parser.add_argument('--num_workers', type=int, required=False)
+        parser.add_argument('--n_shot', type=int, default=4)
+        parser.add_argument('--n_query', type=int, default=12)
+        parser.add_argument('--n_class', type=int, default=12)
+
         return parser
 
     def train_dataloader(self):
@@ -264,7 +274,7 @@ class MetaDataModule(pl.LightningDataModule):
 
     def test_dataloader(self):
         """Retrieve the PyTorch DataLoader for testing"""
-        assert hasattr(self, 'test__dataset')
+        assert hasattr(self, 'test_dataset')
         return loader(self.test_dataset, 'test', self.batch_size, self.num_workers)
 
 def episode_collate(batch):

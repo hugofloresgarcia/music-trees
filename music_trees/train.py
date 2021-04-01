@@ -1,42 +1,40 @@
 """train.py - model training"""
 import music_trees as mt
-from embedding_viz.logger import EmbeddingSpaceLogger
+from embviz.logger import EmbeddingSpaceLogger
 
 import argparse
 from pathlib import Path
 
 import pytorch_lightning as pl
 import torch
+from str2bool import str2bool
+import termtables as tt
 
 MAX_EPISODES = 60000
-NUM_VAL_EPISODES = 500
+NUM_VAL_EPISODES = 300
 VAL_CHECK_INTERVAL = 100
 GRAD_CLIP = 1
-
-N_CLASS = 12
-N_SHOT = 5
-N_QUERY = 16
 
 def train(args):
 
     # setup transforms
     audio_tfm = mt.preprocess.LogMelSpec(hop_length=128, win_length=512)
-    episode_tfm = mt.preprocess.EpisodicTransform(n_class=N_CLASS, 
-                                                  n_shot=N_SHOT, n_query=N_QUERY)
+    episode_tfm = mt.preprocess.EpisodicTransform(n_class=args.n_class, 
+                                                  n_shot=args.n_shot, n_query=args.n_query)
 
     # set up data
     datamodule = mt.data.MetaDataModule(name=args.dataset,
                                         batch_size=args.batch_size,
                                         num_workers=args.num_workers, 
                                         n_episodes=MAX_EPISODES,
-                                        n_class=N_CLASS, 
-                                        n_shot=N_SHOT, 
-                                        n_query=N_QUERY,
+                                        n_class=args.n_class, 
+                                        n_shot=args.n_shot, 
+                                        n_query=args.n_query,
                                         audio_tfm=audio_tfm, 
                                         epi_tfm=episode_tfm)
 
     # set up model
-    model = mt.model.ProtoNet(
+    model = mt.models.core.ProtoNet(
         learning_rate=args.learning_rate)
 
     # logging
@@ -46,9 +44,9 @@ def train(args):
     exp_dir = Path(logger.save_dir) / logger.name / f"version_{logger.experiment.version}"
     model.exp_dir = exp_dir
 
-    emb_logger = EmbeddingSpaceLogger(exp_dir / 'embeddings', n_components=2, 
-                                      method='tsne')
-    model.emb_logger = emb_logger
+    emb_loggers = {part: EmbeddingSpaceLogger(exp_dir / f'{part}-embeddings', n_components=2, 
+                                      method='tsne') for part in ('train', 'val', 'test')}
+    model.emb_loggers = emb_loggers
 
     # CALLBACKS
     callbacks = []
@@ -85,7 +83,6 @@ def train(args):
         logger=logger,
         terminate_on_nan=True,
         resume_from_checkpoint=best_model_path,
-        # weights_summary='full',
         log_gpu_memory=True,
         gpus='0' if torch.cuda.is_available() else None,
         profiler=pl.profiler.SimpleProfiler(
@@ -95,8 +92,14 @@ def train(args):
         num_sanity_val_steps=0,
         move_metrics_to_cpu=True)
 
-    # Train
-    trainer.fit(model, datamodule=datamodule)
+    if not args.test:
+        trainer.fit(model, datamodule=datamodule)
+    else:
+        results = trainer.test(model, datamodule=datamodule)
+        header = list(results[0].keys())
+        data = list(results[0].values())
+        tt.print(data, header=header, style=tt.styles.markdown)
+        
 
 if __name__ == '__main__':
     """Parse command-line arguments"""
@@ -112,12 +115,14 @@ if __name__ == '__main__':
         help='name of the experiment')
     parser.add_argument('--version', type=int, required=False, 
         help='version. If not provided, a new version is created')
+    parser.add_argument('--test', type=str2bool, default=False, 
+                        required=False)
 
     # add datamodule arguments
     parser = mt.data.MetaDataModule.add_argparse_args(parser)
 
     # add model arguments
-    parser = mt.model.ProtoNet.add_model_specific_args(parser)
+    parser = mt.models.core.ProtoNet.add_model_specific_args(parser)
 
     args = parser.parse_args()
 

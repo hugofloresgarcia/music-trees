@@ -2,26 +2,18 @@ import music_trees as mt
 
 import requests
 from pathlib import Path
-import warnings
 import urllib.request
 import logging
 import os
 import zipfile
-import re
 import glob
-import uuid
 
-from tqdm.contrib.concurrent import process_map
-from nussl import AudioSignal
+import re
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 RAW_DOWLOAD_DIR = Path('/media/CHONK/data/katunog')
 BASE_URL = 'https://katunog.asti.dost.gov.ph/'
-
-def clean(string: str):
-    string = re.sub("[\(\[].*?[\)\]]", "", string)
-    return string.strip().strip("',/\n").lower().replace(' ', '_')
 
 def extract_nested_zip(zippedFile, toFolder):
     """ Extract a zip file including any nested zip files
@@ -40,44 +32,6 @@ def extract_nested_zip(zippedFile, toFolder):
                 filename = filename[0:-4]
                 extract_nested_zip(fileSpec, os.path.join(root, filename))
 
-def create_entry(args):
-    path, root_dir = args
-    path = Path(path)
-    filename = path.name
-    logging.info(f'processing: {filename}')
-    if 'viola_D6_05_piano_arco-normal.mp3' in filename or \
-        'saxophone_Fs3_15_fortissimo_normal.mp3' in filename or \
-        "guitar_Gs4_very-long_forte_normal.mp3" in filename or \
-            "bass-clarinet_Gs3_025_piano_normal.mp3" in filename:
-        os.remove(path)
-        return
-    if path.suffix == '.mp3':
-        # convert mp3 to wav
-        src = path
-        dst = path.with_suffix('.wav')
-
-        # convert wav to mp3
-        sound = pydub.AudioSegment.from_mp3(src)
-        sound.export(dst, format='wav')
-
-        os.remove(src)
-
-        path = dst
-        filename = path.name
-
-        fsplit = filename.split('_')
-
-        metadata = {
-            'instrument': fsplit[0],
-            'pitch': fsplit[1],
-            'path_relative_to_root': path.parent.relative_to(root_dir),
-            'filename': filename,
-            'note_length': fsplit[2],
-            'dynamic': fsplit[3],
-            'articulation': fsplit[4]
-        }
-    return metadata
-
 def query_instrument_metadata():
     """ finds all instruments offered by the api
     and its control numbers for download"""
@@ -90,8 +44,8 @@ def query_instrument_metadata():
     response = requests.post(BASE_URL + 'api/', data)
     inst_records = response.json()['data']['instruments']['objects']
 
-    instrument_metadata = [dict(name=clean(r['localName']), 
-                                hornbostel=clean(r['hornbostel']['name']),
+    instrument_metadata = [dict(name=mt.generate.core.clean(r['localName']), 
+                                hornbostel=mt.generate.core.clean(r['hornbostel']['name']),
                                 ctrl_num=int(r['controlNumber'].strip('PIISD'))) for r in inst_records]
     return instrument_metadata
 
@@ -163,77 +117,4 @@ def download_and_get_katunog_data():
     # breakpoint()
     return files
 
-def _generate_records_from_file(item: dict):
-    """ expects a dict with structure:
-    {
-        'path': path to the audio file
-        'instrument': instrument label
-    }
-    """
-    # load the audio
-    signal = AudioSignal(path_to_input_file=item['path'])
-    signal.resample(item['sample_rate'])
-
-    # remove all silence
-    signal = mt.utils.audio.trim_silence(signal, item['sample_rate'])
-
-    # window signal
-    window_len = int(item['sample_rate'] * item['example_length'])
-    hop_len = int(item['sample_rate'] * item['hop_length'])
-
-    windows = mt.utils.audio.window(signal, window_len, hop_len)
-
-    # create and save a new record for each window
-    for sig in windows:
-        extra = dict(item)
-        del extra['path']
-        entry = mt.utils.data.make_entry(sig, uuid=str(uuid.uuid4()), format='wav',
-                                         **extra)
-
-        output_path = mt.utils.data.get_path(entry)
-        output_path.parent.mkdir(exist_ok=True)
-
-        assert signal.has_data, f"attemped to write an empty audio_file: {entry}"
-        sig.write_audio_to_file(output_path.with_suffix('.wav'),
-                                sample_rate=entry['sample_rate'])
-        mt.utils.data.save_entry(entry, output_path.with_suffix('.json'))
-
-def generate_katunog_data(name: str, example_length: float,
-                           hop_length: float, sample_rate: int):
-    # set an output dir
-    output_dir = mt.DATA_DIR / name
-    output_dir.mkdir(exist_ok=False)
-
-    # grab the list of all files
-    file_records = download_and_get_katunog_data()
-    # add hop, example, hop, and sample rate data
-    for r in file_records:
-        r.update({
-            'dataset': name,
-            'example_length': example_length,
-            'hop_length': hop_length,
-            'sample_rate': sample_rate,
-            'track': Path(r['path']).stem
-        })
-
-    # for r in file_records:
-    #     _generate_records_from_file(r)
-    # do the magic
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        process_map(_generate_records_from_file, file_records,
-                    max_workers=os.cpu_count() // 2)
-
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('--name', type=str, required=True)
-    parser.add_argument('--example_length', type=float, default=0.5)
-    parser.add_argument('--hop_length', type=float, default=0.125)
-    parser.add_argument('--sample_rate', type=int, default=16000)
-
-    args = parser.parse_args()
-
-    generate_katunog_data(**vars(args))
+loader_fn = download_and_get_katunog_data
