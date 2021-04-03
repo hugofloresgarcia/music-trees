@@ -23,12 +23,12 @@ def all_unique(lst: List[str]):
 def odstack(od: OrderedDict, dim: int):
     """given an ordered dict with tensors as values, 
     will stack the tensors at the given dim"""
-    return torch.stack(list(od.values), dim=dim)
+    return torch.stack(list(od.values()), dim=dim)
 
 def odcat(od: OrderedDict, dim: int):
     """given an ordered dict with tensors as values, 
     will concat the tensors at the given dim"""
-    return torch.cat(list(od.values), dim=dim)
+    return torch.cat(list(od.values()), dim=dim)
 
 class LayerTree(nn.Module):
 
@@ -59,6 +59,7 @@ class LayerTree(nn.Module):
         predictions = []
 
         x_in = x
+        # breakpoint()
         for layerdict, classifier in zip(self.layers, self.classifiers):
             # get "expert" embeddings for each node at this level
             embs = OrderedDict([(name, layer(x_in))
@@ -68,10 +69,10 @@ class LayerTree(nn.Module):
             classifier_in = odcat(embs, dim=-1)
             probs = classifier(classifier_in)
 
-            # weigh the expert embeddings with the computed class probabilities
-            assert len(probs) == len(embs)
-            embs = OrderedDict(
-                [(name, emb * p) for (name, emb), p in zip(embs.items(), probs)])
+            # weigh the expert embeddings with the computed class 
+            assert probs.shape[-1] == len(embs)
+            # embs = OrderedDict(
+                # [(name, emb * probs[:, idx:idx+1]) for idx, (name, emb) in enumerate(embs.items())])
 
             probs = OrderedDict([(name, p)
                                 for name, p in zip(embs.keys(), probs)])
@@ -83,6 +84,11 @@ class LayerTree(nn.Module):
 
         return {'embeddings': embeddings, 'predictions': predictions}
 
+    def compute_loss(self, labels: list, output: dict, criterion: callable):
+        # grab the list of predictions. should be an List[OrderedDict]
+        preds = output['predictions']
+
+
     @staticmethod
     def create_sparse_layers(root_d: int, nodes: List[List[str]]):
         layers = nn.ModuleList()
@@ -90,7 +96,7 @@ class LayerTree(nn.Module):
 
         current_dim = root_d
         for parent_layer in nodes:
-            partition_dim = current_dim // len(nodes)
+            partition_dim = current_dim // len(parent_layer)
 
             # create a new ModuleDict, where the current sparse layer will reside
             layer = nn.ModuleDict(OrderedDict(
@@ -153,7 +159,7 @@ class ProtoNet(pl.LightningModule):
         # add backbone embedding to output
         output['backbone'] = backbone_embedding
 
-        return backbone_embedding
+        return output
 
     def forward(self, episode):
         # after collating, x should be
@@ -167,21 +173,23 @@ class ProtoNet(pl.LightningModule):
         n_c = episode['n_class'][0]
 
         # flatten episode
-        x = x.view(n_b * n_c * (n_k + n_q), x.shape[2:])
+        x = x.view(n_b * n_c * (n_k + n_q), *x.shape[2:])
 
         # forward pass everything
-        x = self._forward_one(x)
+        output = self._forward_one(x)
+        x = odcat(output['embeddings'][-1], dim=-1)
 
         # expand back to batch
         x = x.view(n_b, n_c * (n_k + n_q), -1)
 
         # separate support and query set
         x_s = x[:, :n_k*n_c, :]
-        x_s.view(n_b, n_c, n_k, -1)
+        x_s = x_s.view(n_b, n_c, n_k, -1)
         x_q = x[:, n_k*n_c:, :]
 
         # take mean over d_k to get the prototypes
         x_p = x_s.mean(dim=2, keepdim=False)
+        x_s = x_s.view(n_b, n_c * n_k, -1)
 
         # compute euclidean distances
         # output shoudl be shape (b, q, c)
@@ -207,7 +215,6 @@ class ProtoNet(pl.LightningModule):
 
         return F.cross_entropy(ypred, ytrue)
 
-
     def _main_step(self, batch, index):
         # grab targets
         proto_targets = batch['proto_target']
@@ -216,6 +223,7 @@ class ProtoNet(pl.LightningModule):
         output = self(batch)
 
         loss = self.criterion(output['distances'], proto_targets)
+        hierarchical_loss = self.layer_tree.compute_loss(batch['labels'], output, self.criterion)
 
         output['pred'] = torch.argmax(
             output['distances'], dim=-1, keepdim=False)
@@ -233,7 +241,7 @@ class ProtoNet(pl.LightningModule):
 
         # prepare predictions and targets
         pred = output['pred'].view(-1)
-        target = output['target'].view(-1)
+        target = output['proto_target'].view(-1)
 
         # breakpoint()
         from pytorch_lightning.metrics.functional import accuracy, precision_recall
@@ -248,7 +256,7 @@ class ProtoNet(pl.LightningModule):
         # only do the dim reduction every so often
         if output['index'] % self.trainer.val_check_interval == 0:
             self.log_single_example(output, stage)
-            # self.visualize_embedding_space(output, stage)
+            self.visualize_embedding_space(output, stage)
 
     def log_single_example(self, output: dict, stage: str):
         """ logs output vs predictions as a table for a slice of the batch"""
@@ -261,7 +269,7 @@ class ProtoNet(pl.LightningModule):
         example += f"\t{'prediction':<45}{'target':<45}\n\n"
 
         for p, t in zip(output['pred'][idx],
-                        output['target'][idx]):
+                        output['proto_target'][idx]):
             example += f"\t{gc(p):<35}{gc(t):<35}\n"
 
         self.logger.experiment.add_text(
@@ -272,32 +280,18 @@ class ProtoNet(pl.LightningModule):
         if not hasattr(self, 'emb_loggers'):
             return
         idx = 0
+        records = output['records'][idx]
+        n_support = output['n_shot'][idx] * output['n_class'][idx]
+        n_query = output['n_query'][idx] * output['n_class'][idx]
+
         # class index to class name
         def gc(i): return output['classes'][idx][i]
 
-        embeddings = []
-        labels = []
-        metatypes = []
-        audio_paths = []
-
-        # grab the query set first
-        for q_emb, label, path in zip(output['query_embedding'][idx],
-                                      output['target'][idx],
-                                      output['query_paths'][idx]):
-            embeddings.append(q_emb)
-            labels.append(gc(label))
-            metatypes.append('query')
-            audio_paths.append(path)
-
-        # grab the support set now
-        for class_set, class_label_group, class_path_group in zip(output['support_embedding'][idx],
-                                                                  output['support_target'][idx],
-                                                                  output['support_paths'][idx]):
-            for s_emb, label, path in zip(class_set, class_label_group, class_path_group):
-                embeddings.append(s_emb)
-                labels.append(gc(label))
-                metatypes.append('support')
-                audio_paths.append(path)
+        embeddings = [e for e in output['support_embedding'][idx]
+                      ] + [e for e in output['query_embedding'][idx]]
+        labels = [r['label'] for r in records]
+        metatypes = ['support'] * n_support + ['query'] * n_query
+        audio_paths = [r['audio_path'] for r in records]
 
         # grab the prototypes now
         for p_emb, label in zip(output['prototype_embedding'][idx], output['classes'][idx]):

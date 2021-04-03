@@ -74,18 +74,19 @@ winds:
     - horn section
     - trumpet section
 voices:
-  - male singer
-  - female singer
-  - male speaker
-  - female speaker
-  - male rapper
-  - female rapper
-  - beatboxing
-  - vocalists
-  - choir
-  - crowd
-  - male screamer
-  - female screamer
+  voice:
+    - male singer
+    - female singer
+    - male speaker
+    - female speaker
+    - male rapper
+    - female rapper
+    - beatboxing
+    - vocalists
+    - choir
+    - crowd
+    - male screamer
+    - female screamer
 percussion:
   pitched:
     - xylophone
