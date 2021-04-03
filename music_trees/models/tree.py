@@ -3,8 +3,9 @@
 and also the convblock and backbone modules
 """
 import music_trees as mt
+from music_trees.tree import MusicTree
 from music_trees.utils.train import batch_detach, batch_cpu, \
-                                    batch_detach_cpu
+    batch_detach_cpu
 from music_trees.models.backbone import Backbone
 
 import logging
@@ -16,9 +17,98 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+def all_unique(lst: List[str]):
+    return len(lst) == len(set(lst))
+
+def odstack(od: OrderedDict, dim: int):
+    """given an ordered dict with tensors as values, 
+    will stack the tensors at the given dim"""
+    return torch.stack(list(od.values), dim=dim)
+
+def odcat(od: OrderedDict, dim: int):
+    """given an ordered dict with tensors as values, 
+    will concat the tensors at the given dim"""
+    return torch.cat(list(od.values), dim=dim)
+
+class LayerTree(nn.Module):
+
+    def __init__(self, root_d: int, tree: MusicTree, depth: int):
+        """ creates a stack of layers 
+
+        self.layers is a nn.ModuleList[nn.ModuleDict[str: nn.Linear]]
+        self.classifiers is a nn.ModuleList[nn.Linear] 
+
+        Args:
+            root_d (int): [description]
+            tree (MusicTree): [description]
+            depth (int): [description]
+        """
+        super().__init__()
+        self.root_d = root_d
+        self.tree = tree
+
+        nodes = []
+        for i in range(depth):
+            nodes.append(tree.all_nodes_at_depth(i))
+
+        self.layers, self.classifiers = self.create_sparse_layers(root_d, nodes)
+
+    def forward(self, x):
+        embeddings = []
+        predictions = []
+
+        x_in = x
+        for layerdict, classifier in zip(self.layers, self.classifiers):
+            # get "expert" embeddings for each node at this level
+            embs = OrderedDict([(name, layer(x_in)) for name, layer in layerdict.items()])
+
+            # concatenate expert embeddings and compute this layer's class probabilities
+            classifier_in = odcat(embs, dim=-1)
+            probs = classifier(classifier_in)
+
+            # weigh the expert embeddings with the computed class probabilities
+            assert len(probs) == len(embs)
+            embs = OrderedDict(
+                [(name, emb * p) for (name, emb), p in zip(embs.items(), probs)])
+
+            probs = OrderedDict([(name, p) for name, p in zip(embs.keys(), probs)])
+
+            embeddings.append(embs)
+            predictions.append(probs)
+
+            x_in = odcat(embs, dim=-1)
+        
+        return {'embeddings': embeddings, 'predictions': predictions}
+
+    @staticmethod
+    def create_sparse_layers(root_d: int, nodes: List[List[str]]):
+        layers = nn.ModuleList()
+        classifiers = nn.ModuleList()
+
+        current_dim = root_d
+        for parent_layer in nodes:
+            partition_dim = current_dim // len(nodes)
+
+            # create a new ModuleDict, where the current sparse layer will reside
+            layer = nn.ModuleDict(OrderedDict(
+                [(name, nn.Linear(current_dim, partition_dim))
+                for name in parent_layer]
+            ))
+            layers.append(layer)
+            layers_output_dim = len(parent_layer) * partition_dim
+
+            # create a classifier that will take the output of the sparse layer and
+            # classify it into the list of parents
+            classifier = nn.Linear(layers_output_dim, len(parent_layer))
+            classifiers.append(classifier)
+
+            current_dim = layers_output_dim
+
+        return layers, classifiers
+
 class ProtoNet(pl.LightningModule):
 
-    def __init__(self, learning_rate: float):
+    def __init__(self, tree: MusicTree, learning_rate: float, depth: int):
         """ flat protonet for now"""
         super().__init__()
         self.save_hyperparameters()
@@ -26,13 +116,18 @@ class ProtoNet(pl.LightningModule):
 
         # self.example_input_array = torch.zeros((1, 1, 128, 199))
         self.backbone = Backbone()
-        backbone_dims = self._get_backbone_shape()
+        self._backbone_shape = self._get_backbone_shape()
+        root_d = self._backbone_shape[-1]
+
+        self.layer_tree = LayerTree(root_d, tree, depth=depth)
 
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = parent_parser
         parser.add_argument('--learning_rate', type=float, default=0.0003,
                             help='learning rate for training. will be decayed using MultiStepLR')
+        parser.add_argument('--depth', type=int, default=2, 
+                            help='depth of the LayerTree.')
 
         return parser
 
@@ -43,15 +138,19 @@ class ProtoNet(pl.LightningModule):
         o = self.backbone(i)
         return o.shape
 
-    def _forward(self, x):
+    def _forward_one(self, x):
         """forward pass through the backbone model, as well as the 
         coarse grained classifier. Returns the output, weighed embedding, 
         as well as the probits
         """
         # input should be shape (b, c, f, t)
-        x = self.backbone(x)
+        backbone_embedding = self.backbone(x)
+        output = self.layer_tree(backbone_embedding)
 
-        return x
+        # add backbone embedding to output
+        output['backbone'] = backbone_embedding
+
+        return output
 
     def forward(self, support, query):
         """ 
@@ -70,7 +169,7 @@ class ProtoNet(pl.LightningModule):
         # get support embeddings and parent probits
         d_batch, d_cls, d_k, _, d_frq, d_t = support.shape
         support = support.view(d_batch*d_cls*d_k, 1, d_frq, d_t)
-        support = self._forward(support)
+        support = self._forward_one(support)
 
         support = support.view(d_batch, d_cls, d_k, -1)  # expand back
         # support_probits = support_probits.view(d_batch, d_cls, d_k, -1) # expand probits as well
@@ -81,7 +180,7 @@ class ProtoNet(pl.LightningModule):
         # get query embeddings
         d_batch, q_dim, _, d_frq, d_t = query.shape
         query = query.view(d_batch * q_dim, 1, d_frq, d_t)
-        query = self._forward(query)
+        query = self._forward_one(query)
 
         query = query.view(d_batch, q_dim, -1)
         # query_probits = query_probits.view(d_batch, q_dim, -1)
@@ -171,7 +270,8 @@ class ProtoNet(pl.LightningModule):
         #NOTE: assume a fixed num_classes across episodes
         num_classes = len(output['classes'][0])
         self.log(f'accuracy/{stage}', accuracy(pred, target))
-        self.log(f'f1/{stage}', f1(pred, target, num_classes=num_classes, average='weighted'))
+        self.log(f'f1/{stage}', f1(pred, target,
+                 num_classes=num_classes, average='weighted'))
 
         # only do the dim reduction every so often
         if output['index'] % self.trainer.val_check_interval == 0:
@@ -238,7 +338,7 @@ class ProtoNet(pl.LightningModule):
 
         embeddings = torch.stack(embeddings).detach().cpu().numpy()
         self.emb_loggers[stage].add_step(step_key=str(self.global_step), embeddings=embeddings, symbols=metatypes,
-                                 labels=labels, metadata={'audio_path': audio_paths}, title='meta space')
+                                         labels=labels, metadata={'audio_path': audio_paths}, title='meta space')
 
     def training_step(self, batch, index):
         """Performs one step of training"""
@@ -286,7 +386,6 @@ class ProtoNet(pl.LightningModule):
             'monitor': 'loss/train'
         }
         return [optimizer], [scheduler]
-
 
 if __name__ == "__main__":
     model = ProtoNet(parents=['strings', 'winds', 'percussion', 'electric'])

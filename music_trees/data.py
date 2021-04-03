@@ -6,6 +6,7 @@ import random
 import logging
 from pathlib import Path
 from collections import OrderedDict
+from typing import List
 
 import pytorch_lightning as pl
 import torch
@@ -13,10 +14,91 @@ import numpy as np
 from nussl import AudioSignal
 import music_trees as mt
 import shelve
+from torch._C import Value
 import tqdm
 
 import unicodedata
 import re
+
+def records2lists(records):
+    keys = records[0].keys()
+    lists = OrderedDict([(k, [r[k] for r in records]) for k in keys])
+
+    return lists
+
+def list2records(lists):
+    keys = lists.keys()
+    num_records = len(lists[keys[0]])
+    records = []
+
+    for i in range(num_records):
+        record = {}
+        for k in keys:
+            record[k] = lists[k][i]
+        records.append(record)
+
+    return records
+
+class Episode:
+
+    def __init__(self, n_class, n_shot, n_query, **kwargs):
+        """ data structure for storing a few shot learning episode. 
+        input data here should be keyworded arguments, where each"""
+        self.data = OrderedDict()
+        for k, v in kwargs.items():
+            self.data[k] = v
+
+        self.extend_from_lists(**kwargs)
+
+    @classmethod
+    def init_from_records(cls, records):
+        lists = cls.records2lists(records)
+        return cls.__init__(**lists)
+
+    def __len__(self):
+        keys = list(self.data.keys())
+        return len(self.data[keys[0]])
+
+    def _internal_list_check(self, data):
+        req_len = len(data)
+        for v in data.values:
+            assert len(v) == req_len()
+    
+    def extend_from_lists(self, **kwargs):
+        """ 
+        example:
+        self.extend(
+            data=[array(), array(), array()], 
+            labels=['guitar', 'piano', 'bass'], 
+            metatags=['query', 'query', 'support']
+        )
+        """
+        self._internal_list_check(kwargs)
+        for k, v in kwargs.items():
+            if k not in kwargs: raise ValueError(f"{k} not found in dict")
+            self.data[k].extend(v)
+
+    def extend_from_records(self, records):
+        lists = self.records2lists(records)
+        return self.extend_from_lists(**lists)
+
+    def update(self, data: dict):
+        for k, v in data:
+            assert len(v) == len(next(self.data.values()))
+            self.data[k] = v
+
+    def as_dict_of_list(self):
+        """returns:
+        {
+            data: List[np.ndarray], numeric data for each example
+            labels: L
+        }
+        """
+        return self.data
+
+    def as_records(self):
+        return self.list2records(self.as_dict_of_list)
+
 
 def slugify(value, allow_unicode=False):
     """
@@ -146,13 +228,7 @@ class MetaDataset(torch.utils.data.Dataset):
 
     def _process_episode(self, episode):
         """apply process_item to all items in an episode"""
-        # apply transforms (or pull from cache)
-        for name, lst in episode['support'].items():
-            for i, item in enumerate(lst):
-                episode['support'][name][i] = self.process_entry(item)
-
-        # apply transforms
-        episode['query'] = [self.process_entry(i) for i in episode['query']]
+        episode['records'] = [self.process_entry(itm) for itm in episode['records']]
 
         # apply episode transform
         if self.epi_tfm is not None:
@@ -175,29 +251,26 @@ class MetaDataset(torch.utils.data.Dataset):
             subset = random.sample(self.classes, k=self.n_class)
             subset.sort()
 
-            # grab the support set
-            support = OrderedDict([
-                (name, [self._get_example_for_class(name)
-                        for _ in range(self.n_shot)])
-                for name in subset
-            ])
-        
-            # grab the query set
-            # grab n_query examples per class
-            query = []
-            for pick in subset:
-                for _ in range(self.n_query):
-                    query.append(self._get_example_for_class(pick))
+            records = []
+
+            metatypes = {'support': self.n_shot, 'query': self.n_query}
+            for metatype, num_examples in metatypes.items():
+                for label_idx, name in enumerate(subset):
+                    for meta_idx in range(num_examples):
+                        item = self._get_example_for_class(name)
+                        records.append(item)
 
             episode = {
-                'support': support, 
-                'query': query, 
-                'classes': subset
+                'n_class': len(subset), 
+                'n_shot': self.n_shot, 
+                'n_query': self.n_query, 
+                'classlist': subset, 
+                'records': records
             }
 
             self.episode_cache[index] = dict(episode)
 
-        episode = dict(self._process_episode(episode))
+        episode = self._process_episode(episode)
 
         return episode
 
@@ -279,24 +352,20 @@ class MetaDataModule(pl.LightningDataModule):
 
 def episode_collate(batch):
     """ 
-    expect batch to be a list of dicts with numpy arrays
-    will only collate the keys in 
+    expect batch to be a list of episodes
     """
     # get the keys we expect
-    keys = batch[0].keys()
+    keys = batch[0]
     output = {}
 
-    for key in keys:
-        exmpl = batch[0][key]
-        if isinstance(exmpl, np.ndarray):
-            stack = np.stack([item[key] for item in batch])
-            output[key] = torch.from_numpy(stack)
-        elif isinstance(exmpl, torch.Tensor):
-            output[key] = torch.stack([item[key] for item in batch])
-        else:
-            output[key] = [item[key] for item in batch]
+    collated_epi = []
+    for batch_idx, epi in enumerate(batch):
+        extension = {'batch_idx': batch_idx for _ in range(len(epi))}
+        epi.update(extension)
+        collated_epi.append(epi)
+    
+    collated_epi = Episode(collated_epi)
 
-    return output
 
 def loader(dataset, partition, batch_size=64, num_workers=None):
     """Retrieve a data loader"""
