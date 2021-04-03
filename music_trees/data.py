@@ -39,67 +39,6 @@ def list2records(lists):
 
     return records
 
-class Episode:
-
-    def __init__(self, n_class, n_shot, n_query, **kwargs):
-        """ data structure for storing a few shot learning episode. 
-        input data here should be keyworded arguments, where each"""
-        self.data = OrderedDict()
-        for k, v in kwargs.items():
-            self.data[k] = v
-
-        self.extend_from_lists(**kwargs)
-
-    @classmethod
-    def init_from_records(cls, records):
-        lists = cls.records2lists(records)
-        return cls.__init__(**lists)
-
-    def __len__(self):
-        keys = list(self.data.keys())
-        return len(self.data[keys[0]])
-
-    def _internal_list_check(self, data):
-        req_len = len(data)
-        for v in data.values:
-            assert len(v) == req_len()
-    
-    def extend_from_lists(self, **kwargs):
-        """ 
-        example:
-        self.extend(
-            data=[array(), array(), array()], 
-            labels=['guitar', 'piano', 'bass'], 
-            metatags=['query', 'query', 'support']
-        )
-        """
-        self._internal_list_check(kwargs)
-        for k, v in kwargs.items():
-            if k not in kwargs: raise ValueError(f"{k} not found in dict")
-            self.data[k].extend(v)
-
-    def extend_from_records(self, records):
-        lists = self.records2lists(records)
-        return self.extend_from_lists(**lists)
-
-    def update(self, data: dict):
-        for k, v in data:
-            assert len(v) == len(next(self.data.values()))
-            self.data[k] = v
-
-    def as_dict_of_list(self):
-        """returns:
-        {
-            data: List[np.ndarray], numeric data for each example
-            labels: L
-        }
-        """
-        return self.data
-
-    def as_records(self):
-        return self.list2records(self.as_dict_of_list)
-
-
 def slugify(value, allow_unicode=False):
     """
     Taken from https://github.com/django/django/blob/master/django/utils/text.py
@@ -264,7 +203,7 @@ class MetaDataset(torch.utils.data.Dataset):
                 'n_class': len(subset), 
                 'n_shot': self.n_shot, 
                 'n_query': self.n_query, 
-                'classlist': subset, 
+                'classes': subset, 
                 'records': records
             }
 
@@ -351,21 +290,21 @@ class MetaDataModule(pl.LightningDataModule):
         return loader(self.test_dataset, 'test', self.batch_size, self.num_workers)
 
 def episode_collate(batch):
-    """ 
-    expect batch to be a list of episodes
-    """
     # get the keys we expect
-    keys = batch[0]
+    keys = batch[0].keys()
     output = {}
 
-    collated_epi = []
-    for batch_idx, epi in enumerate(batch):
-        extension = {'batch_idx': batch_idx for _ in range(len(epi))}
-        epi.update(extension)
-        collated_epi.append(epi)
-    
-    collated_epi = Episode(collated_epi)
+    for key in keys:
+        exmpl = batch[0][key]
+        if isinstance(exmpl, np.ndarray):
+            stack = np.stack([item[key] for item in batch])
+            output[key] = torch.from_numpy(stack)
+        elif isinstance(exmpl, torch.Tensor):
+            output[key] = torch.stack([item[key] for item in batch])
+        else:
+            output[key] = [item[key] for item in batch]
 
+    return output
 
 def loader(dataset, partition, batch_size=64, num_workers=None):
     """Retrieve a data loader"""

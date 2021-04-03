@@ -10,6 +10,39 @@ import torch
 import librosa
 import numpy as np
 
+class EpisodicTransform:
+
+    def __init__(self):
+        """ 
+        wrapper for using regular single-example transforms with an episodic
+        dataset
+
+        the provided audio_tfm must convert the AudioSignals to numpy arrays!!!!!
+        """ 
+
+    def __call__(self, episode):
+        # get the list of classes
+        classlist = episode['classes']
+        n_support = episode['n_class'] * episode['n_shot']
+
+        # grab the support set
+        support_records = episode['records'][:n_support]
+        support = np.stack([e['audio'] for e in support_records])
+        support_target = np.stack(
+            [np.argmax(get_one_hot(e['label'], classlist), axis=0) for e in support_records])
+
+        episode['support'] = support.reshape(episode['n_class'], episode['n_shot'], *support.shape[1:])
+        episode['support_target'] = support_target.reshape(
+            episode['n_class'], episode['n_shot'], *support.shape[1:])
+
+        # process query set
+        query_records = episode['records'][n_support:]
+        episode['query'] = np.stack([e['audio'] for e in query_records])
+        episode['query_target'] = np.stack(
+            [np.argmax(get_one_hot(e['label'], classlist), axis=0) for e in query_records])
+
+        return episode
+
 class RandomEffects:
 
     def __init__(self, effect_chain=None):
