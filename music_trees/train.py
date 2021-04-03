@@ -19,8 +19,7 @@ def train(args):
 
     # setup transforms
     audio_tfm = mt.preprocess.LogMelSpec(hop_length=128, win_length=512)
-    episode_tfm = mt.preprocess.EpisodicTransform(n_class=args.n_class, 
-                                                  n_shot=args.n_shot, n_query=args.n_query)
+    episode_tfm = mt.preprocess.EpisodicTransform()
 
     # set up data
     datamodule = mt.data.MetaDataModule(name=args.dataset,
@@ -34,7 +33,10 @@ def train(args):
                                         epi_tfm=episode_tfm)
 
     # set up model
-    model = mt.models.core.ProtoNet(
+    taxonomy = mt.utils.data.load_entry(
+        mt.ASSETS_DIR/'taxonomies'/'base-taxonomy.yaml', 'yaml')
+    tree = mt.tree.MusicTree.from_taxonomy(taxonomy)
+    model = mt.models.core.ProtoNet(tree, depth=2,
         learning_rate=args.learning_rate)
 
     # logging

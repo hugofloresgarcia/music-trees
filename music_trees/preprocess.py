@@ -23,24 +23,12 @@ class EpisodicTransform:
     def __call__(self, episode):
         # get the list of classes
         classlist = episode['classes']
-        n_support = episode['n_class'] * episode['n_shot']
-
-        # grab the support set
-        support_records = episode['records'][:n_support]
-        support = np.stack([e['audio'] for e in support_records])
-        support_target = np.stack(
-            [np.argmax(get_one_hot(e['label'], classlist), axis=0) for e in support_records])
-
-        episode['support'] = support.reshape(episode['n_class'], episode['n_shot'], *support.shape[1:])
-        episode['support_target'] = support_target.reshape(
-            episode['n_class'], episode['n_shot'], *support.shape[1:])
-
-        # process query set
-        query_records = episode['records'][n_support:]
-        episode['query'] = np.stack([e['audio'] for e in query_records])
-        episode['query_target'] = np.stack(
-            [np.argmax(get_one_hot(e['label'], classlist), axis=0) for e in query_records])
-
+        x = np.stack([e['audio'] for e in episode['records']])
+        labels = [e['label'] for e in episode['records']]
+        # only grab targets for the query set
+        proto_target = np.stack([np.argmax(get_one_hot(e['label'], classlist), axis=0) 
+                            for e in episode['records'][episode['n_shot']*episode['n_class']:]])
+        episode.update(dict(x=x, labels=labels, proto_target=proto_target))
         return episode
 
 class RandomEffects:

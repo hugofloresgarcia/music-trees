@@ -1,5 +1,5 @@
 strings:
-  # bowed:
+  bowed:
     - erhu
     - violin
     - viola
@@ -10,7 +10,7 @@ strings:
     - cello section
     - string section
     - dilruba
-  # plucked:
+  plucked:
     - acoustic guitar
     - clean electric guitar
     - electric bass
@@ -26,7 +26,7 @@ strings:
     - ukulele
     - zhongruan
     - sitar
-  # struck:
+  struck:
     - dulcimer
     - yangqin
     - piano

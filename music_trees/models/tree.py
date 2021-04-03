@@ -49,7 +49,7 @@ class LayerTree(nn.Module):
 
         nodes = []
         for i in range(depth):
-            nodes.append(tree.all_nodes_at_depth(i))
+            nodes.append([n.uid for n in tree.all_nodes_at_depth(i)])
 
         self.layers, self.classifiers = self.create_sparse_layers(root_d, nodes)
 
@@ -111,7 +111,7 @@ class ProtoNet(pl.LightningModule):
     def __init__(self, tree: MusicTree, learning_rate: float, depth: int):
         """ flat protonet for now"""
         super().__init__()
-        self.save_hyperparameters()
+        self.save_hyperparameters(['learning_rate', 'depth'])
         self.learning_rate = learning_rate
 
         # self.example_input_array = torch.zeros((1, 1, 128, 199))
@@ -150,56 +150,46 @@ class ProtoNet(pl.LightningModule):
         # add backbone embedding to output
         output['backbone'] = backbone_embedding
 
-        return output
+        return backbone_embedding
 
-    def forward(self, support, query):
-        """ 
-        support should be a torch Tensor of shape (b(atch), c(lass), k, 1, f(requency), t(ime))
-        query should be a torch Tensor of shape (b, q, 1, f(requency), t(ime))
+    def forward(self, episode):
+        # after collating, x should be 
+        # shape (batch, n_c*n_k + n_q, -1)
+        x = episode['x']
 
-        output will be a dict with
-        
-        dists: euclidean distances formed from comparing query vectors with support prototypes, with shape (b, q, c)
-        query_probits: log-probabilities for query examples, shape (b, q, p(arents)
-        support_probits: log-probabilities for each example in the (b(atch), c(lass), k, p(arents))
-        """
-        assert support.ndim == 6
-        assert query.ndim == 5
+        # get batch dim
+        n_b = x.shape[0]
+        n_k = episode['n_shot']
+        n_q = episode['n_query']
+        n_c = episode['n_class']
 
-        # get support embeddings and parent probits
-        d_batch, d_cls, d_k, _, d_frq, d_t = support.shape
-        support = support.view(d_batch*d_cls*d_k, 1, d_frq, d_t)
-        support = self._forward_one(support)
+        # flatten episode
+        x = x.view(n_b * (n_k * n_c + n_q), -1)
 
-        support = support.view(d_batch, d_cls, d_k, -1)  # expand back
-        # support_probits = support_probits.view(d_batch, d_cls, d_k, -1) # expand probits as well
+        # forward pass everything
+        x = self._forward_one(x)
+
+        # expand back to batch
+        x = x.view(n_b, (n_k * n_c + n_q), -1)
+
+        # separate support and query set
+        x_s = x[:, :n_k*n_c, :]
+        x_s.view(n_b, n_c, n_k, -1)
+        x_q = x[:, n_k*n_c:, :]
 
         # take mean over d_k to get the prototypes
-        prototypes = support.mean(dim=2, keepdim=False)
-
-        # get query embeddings
-        d_batch, q_dim, _, d_frq, d_t = query.shape
-        query = query.view(d_batch * q_dim, 1, d_frq, d_t)
-        query = self._forward_one(query)
-
-        query = query.view(d_batch, q_dim, -1)
-        # query_probits = query_probits.view(d_batch, q_dim, -1)
-
-        # by here, query should be shape (b, q, n)
-        # and prototypes should be shape (b, c, n)
+        x_p = x_s.mean(dim=2, keepdim=False)
 
         # compute euclidean distances
         # output shoudl be shape (b, q, c)
         # so that the row vectors are the logits for the classes
         # for each query, in the batch
-        dists = torch.cdist(query, prototypes, p=2)
-        # breakpoint()
+        dists = torch.cdist(x_q, x_p, p=2)
+
         return {'distances': -dists,
-                'support_embedding': support,
-                'query_embedding': query,
-                'prototype_embedding': prototypes}
-        # 'query_probits': query_probits,
-        # 'support_probits': support_probits}
+                'support_embedding': x_s,
+                'query_embedding': x_q,
+                'prototype_embedding': x_p}
 
     @staticmethod
     def criterion(ypred, ytrue):
