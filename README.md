@@ -33,6 +33,11 @@ DATASET`. All preprocessed data is saved in `cache/DATASET`.
 export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py --name baseline-mdb --dataset mdb --batch_size 2  --num_workers 20  --learning_rate 0.03  
 ```
 
+debug
+```bash 
+export CUDA_VISIBLE_DEVICES='0' && python -m ipdb  music_trees/train.py --name tree-debug --dataset mdb --batch_size 1  --num_workers 0  --learning_rate 0.03  --depth 2
+```
+
 ### test
 
 ```bash 

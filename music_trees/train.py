@@ -36,7 +36,7 @@ def train(args):
     taxonomy = mt.utils.data.load_entry(
         mt.ASSETS_DIR/'taxonomies'/'base-taxonomy.yaml', 'yaml')
     tree = mt.tree.MusicTree.from_taxonomy(taxonomy)
-    model = mt.models.core.ProtoNet(tree, depth=2,
+    model = mt.models.core.ProtoNet(tree, depth=args.depth,
         learning_rate=args.learning_rate)
 
     # logging

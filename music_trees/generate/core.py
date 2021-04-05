@@ -2,13 +2,10 @@ import music_trees as mt
 from copy import deepcopy
 
 import re
-import warnings
 from pathlib import Path
 import uuid
-import os
 
 from nussl import AudioSignal
-from tqdm.contrib.concurrent import process_map
 
 NUM_AUGMENT_FOLDS = 2
 

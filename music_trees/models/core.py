@@ -71,11 +71,11 @@ class LayerTree(nn.Module):
 
             # weigh the expert embeddings with the computed class 
             assert probs.shape[-1] == len(embs)
-            # embs = OrderedDict(
-                # [(name, emb * probs[:, idx:idx+1]) for idx, (name, emb) in enumerate(embs.items())])
+            embs = OrderedDict(
+                [(name, emb * probs[:, idx:idx+1]) for idx, (name, emb) in enumerate(embs.items())])
 
-            probs = OrderedDict([(name, p)
-                                for name, p in zip(embs.keys(), probs)])
+            probs = OrderedDict([(name, p.unsqueeze(-1))
+                                for name, p in zip(embs.keys(), probs.t())])
 
             embeddings.append(embs)
             predictions.append(probs)
@@ -84,10 +84,40 @@ class LayerTree(nn.Module):
 
         return {'embeddings': embeddings, 'predictions': predictions}
 
-    def compute_loss(self, labels: list, output: dict, criterion: callable):
+    def find_ancestor_labels(self, labels, ancestor_classlist):
+        ancestor_labels = []
+        for l in labels:
+            ancestor = [
+                c for c in ancestor_classlist if self.tree.is_ancestor(c, l)]
+            assert len(ancestor) == 1
+            ancestor_labels.append(ancestor[0])
+        return ancestor_labels
+
+    def compute_losses(self, labels: list, output: dict, 
+                    criterion: callable):
+        # FIX ME WITH A FIXED BATCH SIZE OF 1 EVERYWHERE
+        assert len(labels) == 1
+        labels = labels[0]
         # grab the list of predictions. should be an List[OrderedDict]
         preds = output['predictions']
+        
+        losses = []
+        # go through each prediction dict
+        for pred_dict in preds:
+            # gather the ancestor label targets
+            classlist = list(pred_dict.keys())    
+            ancestor_labels = self.find_ancestor_labels(labels, classlist)
+            # we don't want onehots, we want the onehot's argmax
+            ancestor_labels = [torch.argmax(torch.tensor(mt.utils.data.get_one_hot(a, classlist)), dim=-1)
+                                         for a in ancestor_labels]
+            ancestor_labels = torch.stack(ancestor_labels)
 
+            ancestor_preds = odcat(pred_dict, -1)
+            
+            loss = criterion(ancestor_preds, ancestor_labels.type_as(ancestor_preds).long())
+            losses.append(loss)
+        
+        return losses
 
     @staticmethod
     def create_sparse_layers(root_d: int, nodes: List[List[str]]):
@@ -126,9 +156,12 @@ class ProtoNet(pl.LightningModule):
         # self.example_input_array = torch.zeros((1, 1, 128, 199))
         self.backbone = Backbone()
         self._backbone_shape = self._get_backbone_shape()
-        root_d = self._backbone_shape[-1]
+        d_backbone = self._backbone_shape[-1]
 
-        self.layer_tree = LayerTree(root_d, tree, depth=depth)
+        d_root = d_backbone // 8
+        self.linear_proj = nn.Linear(d_backbone, d_root)
+
+        self.layer_tree = LayerTree(d_root, tree, depth=depth)
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -154,10 +187,12 @@ class ProtoNet(pl.LightningModule):
         """
         # input should be shape (b, c, f, t)
         backbone_embedding = self.backbone(x)
-        output = self.layer_tree(backbone_embedding)
+        root_embedding = self.linear_proj(backbone_embedding)
+
+        output = self.layer_tree(root_embedding)
 
         # add backbone embedding to output
-        output['backbone'] = backbone_embedding
+        output['backbone'] = root_embedding
 
         return output
 
@@ -197,10 +232,11 @@ class ProtoNet(pl.LightningModule):
         # for each query, in the batch
         dists = torch.cdist(x_q, x_p, p=2)
 
-        return {'distances': -dists,
+        output.update({'distances': -dists,
                 'support_embedding': x_s,
                 'query_embedding': x_q,
-                'prototype_embedding': x_p}
+                'prototype_embedding': x_p})
+        return output
 
     @staticmethod
     def criterion(ypred, ytrue):
@@ -222,8 +258,10 @@ class ProtoNet(pl.LightningModule):
         # grab predictions
         output = self(batch)
 
+        # breakpoint()
         loss = self.criterion(output['distances'], proto_targets)
-        hierarchical_loss = self.layer_tree.compute_loss(batch['labels'], output, self.criterion)
+        tree_losses = self.layer_tree.compute_losses(batch['labels'], output, F.cross_entropy) 
+        loss = loss + 0.1*sum(tree_losses)
 
         output['pred'] = torch.argmax(
             output['distances'], dim=-1, keepdim=False)
