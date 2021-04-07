@@ -12,14 +12,19 @@ import termtables as tt
 
 MAX_EPISODES = 60000
 NUM_VAL_EPISODES = 300
-VAL_CHECK_INTERVAL = 100
+VAL_CHECK_INTERVAL = 300
 GRAD_CLIP = 1
+
+
+def get_exp_dir(name: str, version: int):
+    return Path(mt.RUNS_DIR) / name / f"version_{version}"
 
 
 def train(args):
 
     # setup transforms
-    audio_tfm = mt.preprocess.LogMelSpec(hop_length=128, win_length=512)
+    audio_tfm = mt.preprocess.LogMelSpec(hop_length=mt.HOP_LENGTH,
+                                         win_length=mt.WIN_LENGTH)
     episode_tfm = mt.preprocess.EpisodicTransform()
 
     # set up data
@@ -34,18 +39,13 @@ def train(args):
                                         epi_tfm=episode_tfm)
 
     # set up model
-    taxonomy = mt.utils.data.load_entry(
-        mt.ASSETS_DIR/'taxonomies'/'base-taxonomy.yaml', 'yaml')
-    tree = mt.tree.MusicTree.from_taxonomy(taxonomy)
-    model = mt.models.prototree.ProtoTree(tree, depth=args.depth)
-    task = mt.models.core.ProtoTask(model, learning_rate=args.learning_rate)
+    task = mt.models.core.ProtoTask(args)
 
     # logging
     from pytorch_lightning.loggers import TestTubeLogger
     logger = TestTubeLogger(save_dir=mt.RUNS_DIR, name=args.name,
                             version=args.version)
-    exp_dir = Path(logger.save_dir) / logger.name / \
-        f"version_{logger.experiment.version}"
+    exp_dir = get_exp_dir(args.name, logger.experiment.version)
     task.exp_dir = exp_dir
 
     emb_loggers = {part: EmbeddingSpaceLogger(exp_dir / f'{part}-embeddings', n_components=2,
@@ -62,7 +62,7 @@ def train(args):
     # checkpointing
     from pytorch_lightning.callbacks import ModelCheckpoint
     ckpt_callback = ModelCheckpoint(dirpath=exp_dir / 'checkpoints', filename=None,
-                                    monitor='loss/val', save_top_k=3, mode='min')
+                                    monitor='loss/val', save_top_k=1, mode='min')
     callbacks.append(ckpt_callback)
 
     # early stop
@@ -101,6 +101,7 @@ def train(args):
         trainer.fit(task, datamodule=datamodule)
     else:
         results = trainer.test(task, datamodule=datamodule)
+        return results
 
 
 if __name__ == '__main__':

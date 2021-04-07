@@ -12,9 +12,12 @@ import torch.nn.functional as F
 
 class ProtoTree(pl.LightningModule):
 
-    def __init__(self, tree: MusicTree, depth: int):
+    def __init__(self, taxonomy_name: str, depth: int):
         super().__init__()
-        self.save_hyperparameters('depth')
+
+        taxonomy = mt.utils.data.load_entry(
+            mt.ASSETS_DIR/'taxonomies'/f'{taxonomy_name}.yaml', 'yaml')
+        tree = mt.tree.MusicTree.from_taxonomy(taxonomy)
 
         self.backbone = Backbone()
         self._backbone_shape = self._get_backbone_shape()
@@ -30,6 +33,8 @@ class ProtoTree(pl.LightningModule):
         parser = parent_parser
         parser.add_argument('--depth', type=int, default=2,
                             help='depth of the LayerTree.')
+        parser.add_argument('--taxonomy_name', type=str,
+                            default='base-taxonomy')
 
         return parser
 

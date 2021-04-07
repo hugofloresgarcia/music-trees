@@ -108,11 +108,7 @@ class MetaDataset(torch.utils.data.Dataset):
         self.episode_cache = {}
 
     def __len__(self):
-        """ the sum of all available clips, times the number of classes per episode / the number of shots"""
-        if self.deterministic:
-            return sum([len(entries) for entries in self.files.values()]) * self.n_class // self.n_shot // self.n_query
-        else:
-            return self.n_episodes
+        return self.n_episodes
 
     def _load_files(self, name: str, partition: str):
         files = mt.utils.data.load_entry(mt.ASSETS_DIR / name / 'partition.json',
@@ -275,7 +271,7 @@ class MetaDataModule(pl.LightningDataModule):
     @staticmethod
     def add_argparse_args(parser):
         parser.add_argument('--dataset', type=str, required=True)
-        parser.add_argument('--batch_size', type=int, default=64)
+        parser.add_argument('--batch_size', type=int, default=1)
         parser.add_argument('--num_workers', type=int, required=False)
         parser.add_argument('--n_shot', type=int, default=4)
         parser.add_argument('--n_query', type=int, default=12)

@@ -236,6 +236,19 @@ class MusicTree(Tree):
         len_ = len(paths[0])
         return all([len(path) == len_ for path in paths])
 
+    def hlca(self, pred: str, truth: str):
+        """ height of the lowest common ancestor"""
+        all_paths = self.paths_to_leaves()
+        pred_path = reversed([p for p in all_paths if p[-1] == pred][0])
+        truth_path = reversed([p for p in all_paths if p[-1] == truth][0])
+
+        assert len(pred_path) == len(truth_path)
+        for h, (pred_ancestor, truth_ancestor) in enumerate(zip(pred_path, truth_path)):
+            if pred_ancestor == truth_ancestor:
+                return h
+
+        raise ValueError
+
 
 if __name__ == "__main__":
     taxonomy = mdb.INST_TAXONOMY

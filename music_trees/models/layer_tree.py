@@ -1,4 +1,3 @@
-from torch.nn.modules.activation import Tanh
 import music_trees as mt
 from music_trees.tree import MusicTree
 

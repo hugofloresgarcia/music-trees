@@ -1,20 +1,17 @@
-"""model.py - model definition
-#TODO: get the logging and visualization logic outta here
-and also the convblock and backbone modules
-"""
-import music_trees as mt
-from music_trees.utils.train import batch_detach_cpu
-
-import pytorch_lightning as pl
+from music_trees.models.prototree import ProtoTree
 import torch
+import pytorch_lightning as pl
+from music_trees.utils.train import batch_detach_cpu
+import music_trees as mt
 
 
 class ProtoTask(pl.LightningModule):
 
-    def __init__(self, model, learning_rate: float):
+    def __init__(self, hparams):
         super().__init__()
-        self.model = model
-        self.learning_rate = learning_rate
+        self.save_hyperparameters()
+        self.model = ProtoTree(hparams.taxonomy_name, hparams.depth)
+        self.learning_rate = hparams.learning_rate
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -24,7 +21,7 @@ class ProtoTask(pl.LightningModule):
 
         return parser
 
-    def _main_step(self, batch, index):
+    def _main_step(self, batch, index, compute_loss: bool = True):
         # grab predictions
         output = self.model(batch)
         output.update(batch)
@@ -57,6 +54,11 @@ class ProtoTask(pl.LightningModule):
             output = self._main_step(batch, index)
         output = batch_detach_cpu(output)
         self.log_metrics(output, stage='test')
+
+    def eval_step(self, batch, index):
+        with torch.no_grad():
+            output = self._main_step(batch, index)
+        return batch_detach_cpu(output)
 
     def log_metrics(self, output, stage='train'):
         self.log(f'loss/{stage}', output['loss'].detach().cpu())

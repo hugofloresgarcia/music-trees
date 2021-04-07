@@ -1,4 +1,53 @@
+voices:
+- male singer
+- female singer
+- male speaker
+- female speaker
+- male rapper
+- female rapper
+- beatboxing
+- vocalists
+- choir
+- crowd
+- male screamer
+- female screamer
 aerophones:
+- dizi
+- flute
+- flute section
+- piccolo
+- bamboo flute
+- panpipes
+- recorder
+- alto saxophone
+- baritone saxophone
+- bass clarinet
+- clarinet
+- clarinet section
+- tenor saxophone
+- soprano saxophone
+- oboe
+- english horn
+- bassoon
+- bagpipe
+- harmonica
+- concertina
+- accordion
+- bandoneon
+- harmonium
+- pipe organ
+- melodica
+- trumpet
+- cornet
+- trombone
+- french horn
+- euphonium
+- tuba
+- brass section
+- french horn section
+- trombone section
+- horn section
+- trumpet section
 - kalaleng
 - suggaypo
 - balaling
@@ -57,6 +106,34 @@ aerophones:
 - enonggol
 - bali-ing
 chordophones:
+- acoustic guitar
+- clean electric guitar
+- electric bass
+- lap steel guitar
+- guzheng
+- harp
+- harpsichord
+- liuqin
+- mandolin
+- oud
+- slide guitar
+- ukulele
+- zhongruan
+- sitar
+- dulcimer
+- yangqin
+- piano
+- tack piano
+- erhu
+- violin
+- viola
+- cello
+- double bass
+- violin section
+- viola section
+- cello section
+- string section
+- dilruba
 - kolitong
 - tambi
 - uritang
@@ -93,6 +170,28 @@ chordophones:
 - banban
 - agaldang
 idiophones:
+- xylophone
+- vibraphone
+- marimba
+- glockenspiel
+- chimes
+- electric piano
+- triangle
+- sleigh bells
+- cowbell
+- cabasa
+- high hat
+- gong
+- guiro
+- gu
+- cymbal
+- castanet
+- claps
+- rattle
+- shaker
+- maracas
+- whistle
+- snaps
 - tongatong
 - gangsa
 - bungkaka
@@ -167,6 +266,20 @@ idiophones:
 - "ab\xE1fiw"
 - "ab-a\u2019fu"
 membranophones:
+- drum machine
+- timpani
+- toms
+- snare drum
+- kick drum
+- bass drum
+- bongo
+- conga
+- tambourine
+- darbuka
+- doumbek
+- tabla
+- auxiliary percussion
+- drum set
 - ludag
 - tanangong
 - tambol
