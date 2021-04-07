@@ -1,8 +1,8 @@
 """ tree.py - TODO: write desc and fill docstrings """
 from copy import deepcopy
+import warnings
 
 import medleydb as mdb
-import treelib
 from treelib.tree import Tree
 from treelib.node import Node
 
@@ -17,8 +17,9 @@ class DotDict(dict):
     def __deepcopy__(self, memo=None):
         return DotDict(deepcopy(dict(self), memo=memo))
 
+
 class MusicNode(Node):
-    
+
     def __init__(self, uid: str = None, **kwargs):
         if uid is not None:
             kwargs['identifier'] = uid
@@ -39,7 +40,7 @@ class MusicNode(Node):
 
     @property
     def uid(self):
-        return self.identifier 
+        return self.identifier
 
     def __repr__(self):
         return f"{self.uid}-{self.data.keys()}"
@@ -48,12 +49,13 @@ class MusicNode(Node):
     #     # make a deepcopy of self, but give it a new id
     #     other = deepcopy(self, memo=memo)
 
+
 class MusicTree(Tree):
 
     def __init__(self, **kwargs):
         kwargs['node_class'] = MusicNode
         super().__init__(**kwargs)
-        
+
         if not hasattr(self, 'root'):
             self.create_node('root')
         else:
@@ -73,7 +75,8 @@ class MusicTree(Tree):
                 self._r_make_tree(child, subtaxonomy)
             elif isinstance(subtaxonomy, list):
                 child = self.create_node(name, parent=parent)
-                leaves = [self.create_node(inst, parent=child) for inst in subtaxonomy]
+                leaves = [self.create_node(inst, parent=child)
+                          for inst in subtaxonomy]
             else:
                 raise ValueError(f"expected either a list of dict: {taxonomy}")
 
@@ -98,7 +101,8 @@ class MusicTree(Tree):
         leaf_ids = [n.uid for n in self.leaves(self.root)]
         for name in classlist:
             if name not in leaf_ids:
-                raise ValueError(f"{name} is missing from the leaves of the tree: {leaf_ids}")
+                raise ValueError(
+                    f"{name} is missing from the leaves of the tree: {leaf_ids}")
 
         def _leaves_eq_classlist(classlist):
             leaf_ids = [n.uid for n in self.leaves(self.root)]
@@ -118,7 +122,7 @@ class MusicTree(Tree):
                     self.remove_node(node.uid)
 
         return self
-            
+
     def all_nodes_at_depth(self, depth: int):
         """ returns a list of nodes at a given depth 
             if get_shallow_leaves is True, also returns 
@@ -157,7 +161,7 @@ class MusicTree(Tree):
     def amend_paths(self, amend_fn: callable):
         paths = list(self.paths_to_leaves())
         amends = [True for path in paths]
-        while not all([a == False for a in amends]):  
+        while not all([a == False for a in amends]):
             amends = []
             for path in paths:
                 amend = amend_fn(path)
@@ -170,7 +174,7 @@ class MusicTree(Tree):
     def even_depth(self):
         """ 
         this is probably unnecessarily O(n^2)
-        
+
         modifies the tree, such that
         the length of all paths from the root node to any 
         leaf node is equal. This is done by inserting a new
@@ -196,7 +200,7 @@ class MusicTree(Tree):
                 for child in children:
                     # move the leaf as a child to the new parent
                     self.move_node(child.uid, new_parent.uid)
-                
+
                 return True
             else:
                 return False
@@ -209,7 +213,8 @@ class MusicTree(Tree):
         the maximum depth of the tree is the depth provided
         """
         # we wanna cut the parents so depth is +1
-        depth += 1 
+        depth += 1
+
         def shorten_path_if_needed(path):
             if len(path) > depth:
                 # link past the first parent
@@ -231,8 +236,9 @@ class MusicTree(Tree):
         len_ = len(paths[0])
         return all([len(path) == len_ for path in paths])
 
+
 if __name__ == "__main__":
     taxonomy = mdb.INST_TAXONOMY
-    
+
     tree = MusicTree.from_taxonomy(taxonomy)
     print([node.identifier for node in tree.all_nodes_at_depth(2)])

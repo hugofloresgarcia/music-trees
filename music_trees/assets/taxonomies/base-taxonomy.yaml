@@ -127,16 +127,16 @@ percussion:
     - tabla
     - auxiliary percussion
     - drum set
-electric:
-  amplified:
-    - distorted electric guitar
-  electronic:
-    - electronic organ
-    - synthesizer
-    - theremin
-    - fx/processed sound
-    - scratches
-    - sampler
-other:
-    - Main System
-    - Unlabeled
+# electric:
+#   amplified:
+#     - distorted electric guitar
+#   electronic:
+#     - electronic organ
+#     - synthesizer
+#     - theremin
+#     - fx/processed sound
+#     - scratches
+#     - sampler
+# other:
+#     - Main System
+#     - Unlabeled

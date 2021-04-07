@@ -20,11 +20,13 @@ import tqdm
 import unicodedata
 import re
 
+
 def records2lists(records):
     keys = records[0].keys()
     lists = OrderedDict([(k, [r[k] for r in records]) for k in keys])
 
     return lists
+
 
 def list2records(lists):
     keys = lists.keys()
@@ -38,6 +40,7 @@ def list2records(lists):
         records.append(record)
 
     return records
+
 
 def slugify(value, allow_unicode=False):
     """
@@ -56,10 +59,11 @@ def slugify(value, allow_unicode=False):
     value = re.sub(r'[^\w\s-]', '', value.lower())
     return re.sub(r'[-\s]+', '-', value).strip('-_')
 
+
 class MetaDataset(torch.utils.data.Dataset):
 
     def __init__(self, name: str, partition: str, n_episodes: int, n_class: int, n_shot: int,
-                n_query: int, audio_tfm=None, epi_tfm=None, clear_cache=False, deterministic=False):
+                 n_query: int, audio_tfm=None, epi_tfm=None, clear_cache=False, deterministic=False):
         """pytorch dataset for meta learning. 
 
         Args:
@@ -72,7 +76,7 @@ class MetaDataset(torch.utils.data.Dataset):
         """
         super().__init__()
         # load the classlist for this partition
-        self.root = mt.DATA_DIR / name 
+        self.root = mt.DATA_DIR / name
         self.files = self._load_files(name, partition)
         self.classes = sorted(list(self.files.keys()))
 
@@ -86,17 +90,18 @@ class MetaDataset(torch.utils.data.Dataset):
         self.epi_tfm = epi_tfm
 
         cache_name = repr(self.audio_tfm)
-        self.shelf_path = mt.CACHE_DIR / name / cache_name 
+        self.shelf_path = mt.CACHE_DIR / name / cache_name
         self.shelf_path.parent.mkdir(exist_ok=True, parents=True)
         if self.shelf_path.exists() and clear_cache:
-            logging.warn(f'clear_cache = True and cache exists. clearing {self.shelf_path}')
+            logging.warn(
+                f'clear_cache = True and cache exists. clearing {self.shelf_path}')
             os.remove(self.shelf_path)
-        
+
         self.cache_dataset()
-        
+
         # generally, we want to create new episodes
         # on the fly
-        # however, for validation and evaluation, 
+        # however, for validation and evaluation,
         # we want the episodes to remain deterministic
         # so we'll cache the episode metadata here
         self.deterministic = deterministic
@@ -105,13 +110,13 @@ class MetaDataset(torch.utils.data.Dataset):
     def __len__(self):
         """ the sum of all available clips, times the number of classes per episode / the number of shots"""
         if self.deterministic:
-            return sum([len(entries) for entries in self.files.values()]) * self.n_class // self.n_shot // self.n_query 
+            return sum([len(entries) for entries in self.files.values()]) * self.n_class // self.n_shot // self.n_query
         else:
             return self.n_episodes
 
     def _load_files(self, name: str, partition: str):
-        files = mt.utils.data.load_entry(mt.ASSETS_DIR / name / 'partition.json', 
-                                        format='json')[partition]
+        files = mt.utils.data.load_entry(mt.ASSETS_DIR / name / 'partition.json',
+                                         format='json')[partition]
         # sort by key
         files = OrderedDict(sorted(files.items(), key=lambda x: x[0]))
         return files
@@ -123,7 +128,7 @@ class MetaDataset(torch.utils.data.Dataset):
             # go through all classnames
             for cl, records in self.files.items():
                 for i, entry in tqdm.tqdm(list(enumerate(records))):
-                # all files belonging to a class
+                    # all files belonging to a class
                     self.cache_if_needed(shelf, entry)
                     if i % chunksize:
                         shelf.sync()
@@ -134,7 +139,7 @@ class MetaDataset(torch.utils.data.Dataset):
         else:
             cached_entry = self.transform_entry(entry)
             shelf[entry['uuid']] = cached_entry
-        
+
         cached_entry['audio_path'] = str(Path(
             mt.utils.data.get_path(cached_entry)).with_suffix('.wav').absolute())
         return cached_entry
@@ -167,13 +172,14 @@ class MetaDataset(torch.utils.data.Dataset):
 
     def _process_episode(self, episode):
         """apply process_item to all items in an episode"""
-        episode['records'] = [self.process_entry(itm) for itm in episode['records']]
+        episode['records'] = [self.process_entry(
+            itm) for itm in episode['records']]
 
         # apply episode transform
         if self.epi_tfm is not None:
             episode = self.epi_tfm(episode)
 
-        return episode      
+        return episode
 
     def __getitem__(self, index: int):
         """returns a dict with format:
@@ -181,10 +187,10 @@ class MetaDataset(torch.utils.data.Dataset):
         episode = {
             'support': List[AudioSignal], 
             'query': List[AudioSignal], 
-            'classes': List[str],
+            'classlist': List[str],
         }
         """
-        if self.deterministic and index in self.episode_cache: 
+        if self.deterministic and index in self.episode_cache:
             episode = self.episode_cache[index]
         else:
             subset = random.sample(self.classes, k=self.n_class)
@@ -200,10 +206,10 @@ class MetaDataset(torch.utils.data.Dataset):
                         records.append(item)
 
             episode = {
-                'n_class': len(subset), 
-                'n_shot': self.n_shot, 
-                'n_query': self.n_query, 
-                'classes': subset, 
+                'n_class': len(subset),
+                'n_shot': self.n_shot,
+                'n_query': self.n_query,
+                'classlist': subset,
                 'records': records
             }
 
@@ -212,6 +218,7 @@ class MetaDataset(torch.utils.data.Dataset):
         episode = self._process_episode(episode)
 
         return episode
+
 
 class MetaDataModule(pl.LightningDataModule):
     """PyTorch Lightning data module
@@ -239,26 +246,27 @@ class MetaDataModule(pl.LightningDataModule):
         self.n_class = n_class
 
         self.kwargs = kwargs
-    
+
     def setup(self, stage=None):
         # load all partitions
-        partition = mt.utils.data.load_entry(mt.ASSETS_DIR / self.name / 'partition.json')
+        partition = mt.utils.data.load_entry(
+            mt.ASSETS_DIR / self.name / 'partition.json')
 
         if stage == 'fit':
             assert 'train' in partition
-            self.dataset = MetaDataset(self.name, partition='train', deterministic=False, 
+            self.dataset = MetaDataset(self.name, partition='train', deterministic=False,
                                        n_shot=self.n_shot, n_query=self.n_query, n_class=self.n_class,
                                        **self.kwargs)
 
             if 'val' in partition:
-                self.val_dataset = MetaDataset(self.name, partition='val', deterministic=True, 
+                self.val_dataset = MetaDataset(self.name, partition='val', deterministic=True,
                                                n_shot=self.n_shot, n_query=self.n_query, n_class=self.n_class,
-                                                **self.kwargs)
+                                               **self.kwargs)
             else:
                 self.val_dataset = MetaDataset(self.name, partition='test', deterministic=True,
                                                n_shot=self.n_shot, n_query=self.n_query, n_class=self.n_class,
                                                **self.kwargs)
-        
+
         if stage == 'test':
             self.test_dataset = MetaDataset(self.name, partition='test', deterministic=True,
                                             n_shot=self.n_shot, n_query=self.n_query, n_class=self.n_class,
@@ -289,6 +297,7 @@ class MetaDataModule(pl.LightningDataModule):
         assert hasattr(self, 'test_dataset')
         return loader(self.test_dataset, 'test', self.batch_size, self.num_workers)
 
+
 def episode_collate(batch):
     # get the keys we expect
     keys = batch[0].keys()
@@ -305,6 +314,7 @@ def episode_collate(batch):
             output[key] = [item[key] for item in batch]
 
     return output
+
 
 def loader(dataset, partition, batch_size=64, num_workers=None):
     """Retrieve a data loader"""

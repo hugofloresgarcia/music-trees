@@ -9,6 +9,7 @@ from nussl import AudioSignal
 
 NUM_AUGMENT_FOLDS = 2
 
+
 def _generate_records_from_file(item: dict):
     """ expects a dict with structure:
     {
@@ -51,9 +52,13 @@ def _generate_records_from_file(item: dict):
                                 sample_rate=entry['sample_rate'])
         mt.utils.data.save_entry(entry, output_path.with_suffix('.json'))
 
+
 def clean(string: str):
     string = re.sub("[\(\[].*?[\)\]]", "", string)
-    return string.strip().strip("',/\n").lower().replace(' ', '_')
+    string = string.strip().strip("',/\n").lower().replace(' ', '_')
+    string = string.replace('/', '-')
+    return string
+
 
 def generate_data(dataset: str, name: str, example_length: float,
                   augment: bool, hop_length: float, sample_rate: int):
@@ -64,7 +69,7 @@ def generate_data(dataset: str, name: str, example_length: float,
     # grab the dict of all files
     assert dataset in ('mdb', 'katunog')
     loader_fn = mt.generate.mdb.loader_fn if dataset == 'mdb'\
-         else mt.generate.katunog.loader_fn
+        else mt.generate.katunog.loader_fn
     file_records = loader_fn()
     # add hop, example, hop, and sample rate data
     for r in file_records:

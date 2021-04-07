@@ -15,6 +15,7 @@ NUM_VAL_EPISODES = 300
 VAL_CHECK_INTERVAL = 100
 GRAD_CLIP = 1
 
+
 def train(args):
 
     # setup transforms
@@ -24,31 +25,32 @@ def train(args):
     # set up data
     datamodule = mt.data.MetaDataModule(name=args.dataset,
                                         batch_size=args.batch_size,
-                                        num_workers=args.num_workers, 
+                                        num_workers=args.num_workers,
                                         n_episodes=MAX_EPISODES,
-                                        n_class=args.n_class, 
-                                        n_shot=args.n_shot, 
+                                        n_class=args.n_class,
+                                        n_shot=args.n_shot,
                                         n_query=args.n_query,
-                                        audio_tfm=audio_tfm, 
+                                        audio_tfm=audio_tfm,
                                         epi_tfm=episode_tfm)
 
     # set up model
     taxonomy = mt.utils.data.load_entry(
         mt.ASSETS_DIR/'taxonomies'/'base-taxonomy.yaml', 'yaml')
     tree = mt.tree.MusicTree.from_taxonomy(taxonomy)
-    model = mt.models.core.ProtoNet(tree, depth=args.depth,
-        learning_rate=args.learning_rate)
+    model = mt.models.prototree.ProtoTree(tree, depth=args.depth)
+    task = mt.models.core.ProtoTask(model, learning_rate=args.learning_rate)
 
     # logging
     from pytorch_lightning.loggers import TestTubeLogger
     logger = TestTubeLogger(save_dir=mt.RUNS_DIR, name=args.name,
                             version=args.version)
-    exp_dir = Path(logger.save_dir) / logger.name / f"version_{logger.experiment.version}"
-    model.exp_dir = exp_dir
+    exp_dir = Path(logger.save_dir) / logger.name / \
+        f"version_{logger.experiment.version}"
+    task.exp_dir = exp_dir
 
-    emb_loggers = {part: EmbeddingSpaceLogger(exp_dir / f'{part}-embeddings', n_components=2, 
-                                      method='tsne') for part in ('train', 'val', 'test')}
-    model.emb_loggers = emb_loggers
+    emb_loggers = {part: EmbeddingSpaceLogger(exp_dir / f'{part}-embeddings', n_components=2,
+                                              method='tsne') for part in ('train', 'val', 'test')}
+    task.emb_loggers = emb_loggers
 
     # CALLBACKS
     callbacks = []
@@ -65,8 +67,9 @@ def train(args):
 
     # early stop
     from pytorch_lightning.callbacks import EarlyStopping
-    callbacks.append(EarlyStopping(monitor='loss/val', mode='min', patience=20))
-    
+    callbacks.append(EarlyStopping(
+        monitor='loss/val', mode='min', patience=20))
+
     # get the best path to the model if it exists
     if ckpt_callback.best_model_path == '':
         best_model_path = None
@@ -95,13 +98,10 @@ def train(args):
         move_metrics_to_cpu=True)
 
     if not args.test:
-        trainer.fit(model, datamodule=datamodule)
+        trainer.fit(task, datamodule=datamodule)
     else:
-        results = trainer.test(model, datamodule=datamodule)
-        header = list(results[0].keys())
-        data = list(results[0].values())
-        tt.print(data, header=header, style=tt.styles.markdown)
-        
+        results = trainer.test(task, datamodule=datamodule)
+
 
 if __name__ == '__main__':
     """Parse command-line arguments"""
@@ -113,18 +113,19 @@ if __name__ == '__main__':
     parser = pl.Trainer.add_argparse_args(parser)
 
     # add training script arguments
-    parser.add_argument('--name', type=str, required=True, 
-        help='name of the experiment')
-    parser.add_argument('--version', type=int, required=False, 
-        help='version. If not provided, a new version is created')
-    parser.add_argument('--test', type=str2bool, default=False, 
+    parser.add_argument('--name', type=str, required=True,
+                        help='name of the experiment')
+    parser.add_argument('--version', type=int, required=False,
+                        help='version. If not provided, a new version is created')
+    parser.add_argument('--test', type=str2bool, default=False,
                         required=False)
 
     # add datamodule arguments
     parser = mt.data.MetaDataModule.add_argparse_args(parser)
 
     # add model arguments
-    parser = mt.models.core.ProtoNet.add_model_specific_args(parser)
+    parser = mt.models.prototree.ProtoTree.add_model_specific_args(parser)
+    parser = mt.models.core.ProtoTask.add_model_specific_args(parser)
 
     args = parser.parse_args()
 

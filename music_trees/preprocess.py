@@ -10,6 +10,7 @@ import torch
 import librosa
 import numpy as np
 
+
 class EpisodicTransform:
 
     def __init__(self):
@@ -18,27 +19,29 @@ class EpisodicTransform:
         dataset
 
         the provided audio_tfm must convert the AudioSignals to numpy arrays!!!!!
-        """ 
+        """
 
     def __call__(self, episode):
         # get the list of classes
-        classlist = episode['classes']
+        classlist = episode['classlist']
         x = np.stack([e['audio'] for e in episode['records']])
         labels = [e['label'] for e in episode['records']]
         # only grab targets for the query set
-        proto_target = np.stack([np.argmax(get_one_hot(e['label'], classlist), axis=0) 
-                            for e in episode['records'][episode['n_shot']*episode['n_class']:]])
+        proto_target = np.stack([np.argmax(get_one_hot(e['label'], classlist), axis=0)
+                                 for e in episode['records'][episode['n_shot']*episode['n_class']:]])
         episode.update(dict(x=x, labels=labels, proto_target=proto_target))
         return episode
+
 
 class RandomEffects:
 
     def __init__(self, effect_chain=None):
         self.effect_chain = effect_chain
-    
+
     def __call__(self, signal: AudioSignal):
         _validate_audio_signal(signal)
         return mt.utils.effects.augment_from_audio_signal(signal, self.effect_chain)
+
 
 class LogMelSpec:
 
@@ -65,9 +68,10 @@ class LogMelSpec:
 
         entry['audio'] = spec
         return entry
-    
+
     def __repr__(self):
         return f'logmel-win{self.win_length}-hop{self.hop_length}'
+
 
 def _validate_audio_signal(signal: AudioSignal):
     assert isinstance(signal, AudioSignal), \
