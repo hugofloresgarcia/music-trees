@@ -148,7 +148,7 @@ class ProtoTask(pl.LightningModule):
                 optimizer,
                 mode='min',
                 factor=0.5,
-                patience=100,
+                patience=500,
                 verbose=True,
             ),
             'interval': 'step',

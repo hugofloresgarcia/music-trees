@@ -62,6 +62,7 @@ class ProtoTree(pl.LightningModule):
 
         if len(output['tasks']) > 0:
             output['embedding'] = output['tasks'][-1]['embedding']
+            # output['embedding'] = root_embedding
         else:
             output['embedding'] = root_embedding
 
@@ -124,7 +125,7 @@ class ProtoTree(pl.LightningModule):
 
         output = self.layer_tree.compute_losses(output, F.cross_entropy)
         tree_losses = [t['loss'] for t in output['tasks']]
-        loss = proto_loss + sum(tree_losses)
+        loss = proto_loss + 1 * sum(tree_losses)
 
         #TODO: fixme
         output['proto_task']['target'] = proto_targets

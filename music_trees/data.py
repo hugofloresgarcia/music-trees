@@ -105,7 +105,11 @@ class MetaDataset(torch.utils.data.Dataset):
         # we want the episodes to remain deterministic
         # so we'll cache the episode metadata here
         self.deterministic = deterministic
-        self.episode_cache = {}
+
+        self.episode_cache = []
+        self.epi_shelf_path = f'{str(self.shelf_path)}-epi-{partition}-k{n_shot}-c{n_class}-q{n_query}'
+        if Path(self.epi_shelf_path).exists():
+            os.remove(self.epi_shelf_path)
 
     def __len__(self):
         return self.n_episodes
@@ -130,9 +134,15 @@ class MetaDataset(torch.utils.data.Dataset):
                         shelf.sync()
 
     def cache_if_needed(self, shelf, entry: dict):
+        # this allows us to catch corrupted entries
+        # and recache them on the fly
         if entry['uuid'] in shelf:
-            cached_entry = shelf[entry['uuid']]
-        else:
+            try:
+                cached_entry = shelf[entry['uuid']]
+            except:
+                del shelf[entry['uuid']]
+
+        if entry['uuid'] not in shelf:
             cached_entry = self.transform_entry(entry)
             shelf[entry['uuid']] = cached_entry
 
@@ -177,6 +187,16 @@ class MetaDataset(torch.utils.data.Dataset):
 
         return episode
 
+    def _episode_cache_get(self, index):
+        with shelve.open(str(self.epi_shelf_path), writeback=False) as shelf:
+            # go through all classnames
+            return dict(shelf[index])
+
+    def _episode_cache_set(self, index, item):
+        with shelve.open(str(self.epi_shelf_path), writeback=True) as shelf:
+            shelf[index] = item
+            shelf.sync()
+
     def __getitem__(self, index: int):
         """returns a dict with format:
 
@@ -187,7 +207,7 @@ class MetaDataset(torch.utils.data.Dataset):
         }
         """
         if self.deterministic and index in self.episode_cache:
-            episode = self.episode_cache[index]
+            episode = self._episode_cache_get(str(index)+'a')
         else:
             subset = random.sample(self.classes, k=self.n_class)
             subset.sort()
@@ -209,7 +229,9 @@ class MetaDataset(torch.utils.data.Dataset):
                 'records': records
             }
 
-            self.episode_cache[index] = dict(episode)
+            if self.deterministic:
+                self._episode_cache_set(str(index)+'a', dict(episode))
+                self.episode_cache.append(index)
 
         episode = self._process_episode(episode)
 
