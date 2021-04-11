@@ -6,16 +6,15 @@ import random
 import logging
 from pathlib import Path
 from collections import OrderedDict
-from typing import List
+import pickle
 
 import pytorch_lightning as pl
 import torch
 import numpy as np
 from nussl import AudioSignal
 import music_trees as mt
-import shelve
-from torch._C import Value
 import tqdm
+from tqdm.contrib.concurrent import process_map
 
 import unicodedata
 import re
@@ -90,12 +89,12 @@ class MetaDataset(torch.utils.data.Dataset):
         self.epi_tfm = epi_tfm
 
         cache_name = repr(self.audio_tfm)
-        self.shelf_path = mt.CACHE_DIR / name / cache_name
-        self.shelf_path.parent.mkdir(exist_ok=True, parents=True)
-        if self.shelf_path.exists() and clear_cache:
+        self.cache_root = mt.CACHE_DIR / name / cache_name
+        self.cache_root.mkdir(exist_ok=True, parents=True)
+        if self.cache_root.exists() and clear_cache:
             logging.warn(
-                f'clear_cache = True and cache exists. clearing {self.shelf_path}')
-            os.remove(self.shelf_path)
+                f'clear_cache = True and cache exists. clearing {self.cache_root}')
+            os.remove(self.cache_root)
 
         self.cache_dataset()
 
@@ -106,10 +105,9 @@ class MetaDataset(torch.utils.data.Dataset):
         # so we'll cache the episode metadata here
         self.deterministic = deterministic
 
-        self.episode_cache = []
-        self.epi_shelf_path = self.shelf_path.parent /  \
+        self.epi_cache_root = self.cache_root.parent /  \
             f'{cache_name}-deterministic-episodes-{partition}-k{n_shot}-c{n_class}-q{n_query}'
-        self.epi_shelf_path.mkdir(exist_ok=True)
+        self.epi_cache_root.mkdir(exist_ok=True)
 
     def __len__(self):
         return self.n_episodes
@@ -121,36 +119,26 @@ class MetaDataset(torch.utils.data.Dataset):
         files = OrderedDict(sorted(files.items(), key=lambda x: x[0]))
         return files
 
-    def cache_dataset(self, chunksize=1000):
+    def cache_dataset(self):
         logging.info(f'caching dataset...')
 
-        with shelve.open(str(self.shelf_path), writeback=True) as shelf:
-            # go through all classnames
-            for cl, records in self.files.items():
-                for i, entry in tqdm.tqdm(list(enumerate(records))):
-                    # all files belonging to a class
-                    self.cache_if_needed(shelf, entry)
-                    if i % chunksize:
-                        shelf.sync()
+        # go through all classnames
+        for cl, records in self.files.items():
+            process_map(self.cache_if_needed, records)
+            # for i, entry in tqdm.tqdm(list(enumerate(records))):
+            #     # all files belonging to a class
+            #     self.cache_if_needed(entry)
 
-    def cache_if_needed(self, shelf, entry: dict):
-        # this allows us to catch corrupted entries
-        # and recache them on the fly
-        if entry['uuid'] in shelf:
-            try:
-                cached_entry = shelf[entry['uuid']]
-                if not isinstance(cached_entry, dict):
-                    del shelf[entry['uuid']]
-                    del cached_entry
-            except:
-                del shelf[entry['uuid']]
+    def cache_if_needed(self, entry: dict):
+        entry_path = self.cache_root / entry['uuid']
+        if entry_path.exists():
+            with open(entry_path, 'rb') as f:
+                cached_entry = pickle.load(f)
 
-        if entry['uuid'] not in shelf:
+        if not entry_path.exists():
             cached_entry = self.transform_entry(entry)
-            try:
-                shelf[entry['uuid']] = dict(cached_entry)
-            except:
-                breakpoint()
+            with open(entry_path, 'wb') as f:
+                pickle.dump(cached_entry, f)
 
         cached_entry['audio_path'] = str(Path(
             mt.utils.data.get_path(cached_entry)).with_suffix('.wav').absolute())
@@ -169,12 +157,10 @@ class MetaDataset(torch.utils.data.Dataset):
         return entry
 
     def process_entry(self, entry: dict):
-        # no need to open the shelf in this case
         if self.audio_tfm is None:
             return entry
 
-        with shelve.open(str(self.shelf_path), writeback=False) as shelf:
-            cached_entry = self.cache_if_needed(shelf, entry)
+        cached_entry = self.cache_if_needed(entry)
         return cached_entry
 
     def _get_example_for_class(self, name: str):
@@ -194,14 +180,14 @@ class MetaDataset(torch.utils.data.Dataset):
         return episode
 
     def _episode_cache_get(self, index):
-        return mt.utils.data.load_entry(self.epi_shelf_path / str(index), format='json')
+        return mt.utils.data.load_entry(self.epi_cache_root / str(index), format='json')
 
     def _episode_cache_set(self, index, item):
         mt.utils.data.save_entry(
-            item, self.epi_shelf_path / str(index), format='json')
+            item, self.epi_cache_root / str(index), format='json')
 
     def _check_episode_cached(self, index):
-        return Path(self.epi_shelf_path / str(index)).exists()
+        return Path(self.epi_cache_root / str(index)).exists()
 
     def generate_episode(self):
         """ generates an unprocessed episode"""
@@ -235,7 +221,7 @@ class MetaDataset(torch.utils.data.Dataset):
             'classlist': List[str],
         }
         """
-        if self.deterministic and index in self.episode_cache:
+        if self.deterministic and self._check_episode_cached(index):
             # breakpoint()
             episode = self._episode_cache_get(index)
         else:
