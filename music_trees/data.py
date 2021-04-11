@@ -107,9 +107,9 @@ class MetaDataset(torch.utils.data.Dataset):
         self.deterministic = deterministic
 
         self.episode_cache = []
-        self.epi_shelf_path = f'{str(self.shelf_path)}-epi-{partition}-k{n_shot}-c{n_class}-q{n_query}'
-        if Path(self.epi_shelf_path).exists():
-            os.remove(self.epi_shelf_path)
+        self.epi_shelf_path = self.shelf_path.parent /  \
+            f'{cache_name}-deterministic-episodes-{partition}-k{n_shot}-c{n_class}-q{n_query}'
+        self.epi_shelf_path.mkdir(exist_ok=True)
 
     def __len__(self):
         return self.n_episodes
@@ -139,12 +139,18 @@ class MetaDataset(torch.utils.data.Dataset):
         if entry['uuid'] in shelf:
             try:
                 cached_entry = shelf[entry['uuid']]
+                if not isinstance(cached_entry, dict):
+                    del shelf[entry['uuid']]
+                    del cached_entry
             except:
                 del shelf[entry['uuid']]
 
         if entry['uuid'] not in shelf:
             cached_entry = self.transform_entry(entry)
-            shelf[entry['uuid']] = cached_entry
+            try:
+                shelf[entry['uuid']] = dict(cached_entry)
+            except:
+                breakpoint()
 
         cached_entry['audio_path'] = str(Path(
             mt.utils.data.get_path(cached_entry)).with_suffix('.wav').absolute())
@@ -188,14 +194,37 @@ class MetaDataset(torch.utils.data.Dataset):
         return episode
 
     def _episode_cache_get(self, index):
-        with shelve.open(str(self.epi_shelf_path), writeback=False) as shelf:
-            # go through all classnames
-            return dict(shelf[index])
+        return mt.utils.data.load_entry(self.epi_shelf_path / str(index), format='json')
 
     def _episode_cache_set(self, index, item):
-        with shelve.open(str(self.epi_shelf_path), writeback=True) as shelf:
-            shelf[index] = item
-            shelf.sync()
+        mt.utils.data.save_entry(
+            item, self.epi_shelf_path / str(index), format='json')
+
+    def _check_episode_cached(self, index):
+        return Path(self.epi_shelf_path / str(index)).exists()
+
+    def generate_episode(self):
+        """ generates an unprocessed episode"""
+        subset = random.sample(self.classes, k=self.n_class)
+        subset.sort()
+
+        records = []
+
+        metatypes = {'support': self.n_shot, 'query': self.n_query}
+        for metatype, num_examples in metatypes.items():
+            for label_idx, name in enumerate(subset):
+                for meta_idx in range(num_examples):
+                    item = self._get_example_for_class(name)
+                    records.append(item)
+
+        episode = {
+            'n_class': len(subset),
+            'n_shot': self.n_shot,
+            'n_query': self.n_query,
+            'classlist': subset,
+            'records': records
+        }
+        return episode
 
     def __getitem__(self, index: int):
         """returns a dict with format:
@@ -207,31 +236,13 @@ class MetaDataset(torch.utils.data.Dataset):
         }
         """
         if self.deterministic and index in self.episode_cache:
-            episode = self._episode_cache_get(str(index)+'a')
+            # breakpoint()
+            episode = self._episode_cache_get(index)
         else:
-            subset = random.sample(self.classes, k=self.n_class)
-            subset.sort()
-
-            records = []
-
-            metatypes = {'support': self.n_shot, 'query': self.n_query}
-            for metatype, num_examples in metatypes.items():
-                for label_idx, name in enumerate(subset):
-                    for meta_idx in range(num_examples):
-                        item = self._get_example_for_class(name)
-                        records.append(item)
-
-            episode = {
-                'n_class': len(subset),
-                'n_shot': self.n_shot,
-                'n_query': self.n_query,
-                'classlist': subset,
-                'records': records
-            }
+            episode = self.generate_episode()
 
             if self.deterministic:
-                self._episode_cache_set(str(index)+'a', dict(episode))
-                self.episode_cache.append(index)
+                self._episode_cache_set(index, dict(episode))
 
         episode = self._process_episode(episode)
 

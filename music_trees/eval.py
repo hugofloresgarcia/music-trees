@@ -15,6 +15,9 @@ N_QUERY = 16
 N_SHOT = (1, 2, 4, 8, 16, 32)
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+# TODO: write all results to a RESULTS_DIR and make a table with
+# aggregated versions for different tests (make sure that hparams are included as well)
+
 
 def evaluate(name: str, version: int):
     exp_dir = mt.train.get_exp_dir(name, version)
@@ -59,6 +62,10 @@ def evaluate(name: str, version: int):
 
     all_results = pd.concat(all_results)
     all_results.to_csv(output_dir / 'all_results.csv')
+
+    results_path = mt.ROOT_DIR / 'results' / f'{name}-v{version}.csv'
+    results_path.parent.mkdir(exist_ok=True)
+    all_results.to_csv(results_path)
     print(all_results)
 
 

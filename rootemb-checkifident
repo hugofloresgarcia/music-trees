@@ -1,0 +1,14 @@
+          layertree-0     proto                     model  n_shot  n_class
+f1_micro     0.500440  0.626115  prototree-d1-rootemb_v10       1       12
+f1_macro     0.361310  0.614620  prototree-d1-rootemb_v10       1       12
+f1_micro     0.494197  0.689130  prototree-d1-rootemb_v10       2       12
+f1_macro     0.360687  0.677202  prototree-d1-rootemb_v10       2       12
+f1_micro     0.504094  0.724542  prototree-d1-rootemb_v10       4       12
+f1_macro     0.363222  0.717443  prototree-d1-rootemb_v10       4       12
+f1_micro     0.500425  0.750172  prototree-d1-rootemb_v10       8       12
+f1_macro     0.358745  0.740712  prototree-d1-rootemb_v10       8       12
+f1_micro     0.511480  0.760750  prototree-d1-rootemb_v10      16       12
+f1_macro     0.367712  0.754140  prototree-d1-rootemb_v10      16       12
+f1_micro     0.501580  0.771693  prototree-d1-rootemb_v10      32       12
+f1_macro     0.359659  0.763075  prototree-d1-rootemb_v10      32       12
+
