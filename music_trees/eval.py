@@ -1,10 +1,11 @@
 import music_trees as mt
+from music_trees.tree import MusicTree
 
 import glob
 
 import torch
+import numpy as np
 import pandas as pd
-from tabulate import tabulate
 from tqdm import tqdm
 
 DATASET = 'katunog'
@@ -28,6 +29,8 @@ def evaluate(name: str, version: int):
 
     model = load_model_from_ckpt(exp_dir)
     model = model.to(DEVICE)
+
+    tree = model.tree
 
     # setup transforms
     audio_tfm = mt.preprocess.LogMelSpec(hop_length=mt.HOP_LENGTH,
@@ -54,7 +57,7 @@ def evaluate(name: str, version: int):
             output = prune_output(output)
             outputs.append(output)
 
-        results = pd.DataFrame(metrics(outputs))
+        results = pd.DataFrame(metrics(outputs, tree))
         results['model'] = f'{name}_v{version}'
         results['n_shot'] = n_shot
         results['n_class'] = N_CLASS
@@ -93,7 +96,7 @@ def idx2label(labels: torch.Tensor,  classlist: list):
     return [classlist[l] for l in labels]
 
 
-def metrics(outputs: dict):
+def metrics(outputs: dict, tree: MusicTree = None):
     from sklearn.metrics import f1_score
 
     #  gather a concatenated list of all preds and targets
@@ -115,6 +118,9 @@ def metrics(outputs: dict):
                                             average='micro', labels=classlist)
         metrics[tag]['f1_macro'] = f1_score(t['target'], t['pred'],
                                             average='macro',  labels=classlist)
+        if tree is not None:
+            metrics[tag]['hlca'] = np.mean(
+                [tree.hlca(p, tgt) for p, tgt in zip(t['pred'], t['target'])])
 
     return metrics
 

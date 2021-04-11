@@ -124,10 +124,10 @@ class MetaDataset(torch.utils.data.Dataset):
 
         # go through all classnames
         for cl, records in self.files.items():
-            process_map(self.cache_if_needed, records)
-            # for i, entry in tqdm.tqdm(list(enumerate(records))):
-            #     # all files belonging to a class
-            #     self.cache_if_needed(entry)
+            # process_map(self.cache_if_needed, records)
+            for i, entry in tqdm.tqdm(list(enumerate(records))):
+                # all files belonging to a class
+                self.cache_if_needed(entry)
 
     def cache_if_needed(self, entry: dict):
         entry_path = self.cache_root / entry['uuid']

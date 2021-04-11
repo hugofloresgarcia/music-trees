@@ -18,6 +18,7 @@ class ProtoTree(pl.LightningModule):
         taxonomy = mt.utils.data.load_entry(
             mt.ASSETS_DIR/'taxonomies'/f'{taxonomy_name}.yaml', 'yaml')
         tree = mt.tree.MusicTree.from_taxonomy(taxonomy)
+        self.tree = tree
 
         self.backbone = Backbone()
         self._backbone_shape = self._get_backbone_shape()
@@ -34,7 +35,7 @@ class ProtoTree(pl.LightningModule):
         parser.add_argument('--depth', type=int, default=2,
                             help='depth of the LayerTree.')
         parser.add_argument('--taxonomy_name', type=str,
-                            default='base-taxonomy')
+                            default='joint-taxonomy')
 
         return parser
 

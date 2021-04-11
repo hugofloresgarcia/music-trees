@@ -16,7 +16,7 @@ class ProtoTask(pl.LightningModule):
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = parent_parser
-        parser.add_argument('--learning_rate', type=float, default=0.0003,
+        parser.add_argument('--learning_rate', type=float, default=0.003,
                             help='learning rate for training. will be decayed using MultiStepLR')
 
         return parser
