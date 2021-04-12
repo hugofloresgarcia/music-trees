@@ -27,6 +27,7 @@ class ProtoTask(pl.LightningModule):
         output.update(batch)
 
         # compute losses
+        output = self.model.compute_multitask_proto_losses(output, batch)
         output = self.model.compute_losses(output)
 
         # last, add the index for logging
@@ -68,6 +69,7 @@ class ProtoTask(pl.LightningModule):
         # grab the list of all tasks
         tasks = output['tasks']
         tasks.append(output['proto_task'])
+        tasks.append(output['ancestor_task'])
         for task in tasks:
             self.log_classification_task(task, stage)
 

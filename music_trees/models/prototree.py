@@ -1,3 +1,4 @@
+from typing import OrderedDict
 import music_trees as mt
 from music_trees.tree import MusicTree
 from music_trees.models.layer_tree import LayerTree, odstack, odcat
@@ -114,6 +115,75 @@ class ProtoTree(pl.LightningModule):
         }
         return output
 
+    def compute_multitask_proto_losses(self, output: dict, episode: dict):
+        d_batch = output['proto_task']['distances'].shape[0]
+        assert d_batch == 1
+
+        # get the classlist for this episode
+        classlist = output['classlist'][0]
+        prototypes = output['proto_task']['prototype_embedding'][0]
+
+        # get the list of parents for each of the members in the classlist
+        ancestors = [self.tree.get_ancestor(c, 1) for c in classlist]
+
+        c2a = OrderedDict([(c, a) for c, a in zip(classlist, ancestors)])
+
+        protos = OrderedDict([(n, t)
+                              for n, t in zip(classlist, prototypes)])
+
+        ancestor_protos = OrderedDict()
+
+        for clsname in protos:
+            ancestor = c2a[clsname]
+
+            # if we have already registered this ancestor,
+            # it means we already grabbed the relevant tensors for it,
+            # so skip it
+            if ancestor in ancestor_protos:
+                continue
+
+            # otherwise, grab all the tensors which share this ancestor
+            tensor_stack = torch.stack(
+                [p for n, p in protos.items() if c2a[n] == ancestor])
+
+            # take the prototype of the prototypes!
+            ancestor_proto = tensor_stack.mean(dim=0, keepdim=False)
+
+            # register this stack with the ancestor protos
+            ancestor_protos[ancestor] = ancestor_proto
+
+        all_query_records = episode['records'][0][episode['n_shot'][0]
+                                                  * episode['n_class'][0]:]
+        all_query_labels = [e['label'] for e in all_query_records]
+        ancestor_targets = []
+        for l in all_query_labels:
+            # add a onehot too
+            ancestor = c2a[l]
+            onethot = torch.tensor(mt.utils.data.get_one_hot(
+                ancestor, list(set(ancestors))))
+            ancestor_targets.append(onethot.type_as(ancestor_proto).long())
+
+        ancestor_targets = torch.argmax(torch.stack(
+            ancestor_targets), dim=-1, keepdim=False)
+        ancestor_protos = torch.stack(list(ancestor_protos.values()))
+
+        query = output['proto_task']['query_embedding'][0].unsqueeze(0)
+        ancestor_dists = torch.cdist(query, ancestor_protos.unsqueeze(0), p=2)
+
+        ancestor_dists = ancestor_dists.squeeze(0)
+        loss = F.cross_entropy(ancestor_dists, ancestor_targets.view(-1))
+        output['ancestor_task'] = {
+            'classlist': list(set(ancestors)),
+            'distances': -ancestor_dists,
+            'pred': torch.argmax(-ancestor_dists, dim=-1, keepdim=False),
+            'prototype_embedding': ancestor_protos,
+            'query_embedding': query,
+            'target': ancestor_targets,
+            'tag': 'ancestor-proto',
+            'loss': loss
+        }
+        return output
+
     def compute_losses(self, output: dict):
         # compute loss
         proto_targets = output['proto_target'].view(-1)
@@ -126,9 +196,10 @@ class ProtoTree(pl.LightningModule):
 
         output = self.layer_tree.compute_losses(output, F.cross_entropy)
         tree_losses = [t['loss'] for t in output['tasks']]
-        loss = proto_loss + 1 * sum(tree_losses)
+        # loss = proto_loss + 1 * sum(tree_losses)
+        loss = proto_loss + 10 * output['ancestor_task']['loss']
 
-        #TODO: fixme
+        # TODO: fixme
         output['proto_task']['target'] = proto_targets
         output['proto_task']['classlist'] = output['classlist'][0]
         output['proto_task']['loss'] = proto_loss

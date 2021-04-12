@@ -250,6 +250,19 @@ class MusicTree(Tree):
 
         raise ValueError
 
+    def get_ancestor(self, nid: str, height: int):
+        """ finds the ancestor of the node at a particular height. 
+        if the height is 0, returns the node itself
+        """
+        all_paths = self.paths_to_leaves()
+        node_path = list(reversed([p for p in all_paths if p[-1] == nid]))
+        assert len(node_path) == 1
+        node_path = node_path[0]
+
+        assert height < len(node_path)
+
+        return node_path[height]
+
 
 if __name__ == "__main__":
     taxonomy = mdb.INST_TAXONOMY
