@@ -1,0 +1,4 @@
+,proto,model,n_shot,n_class
+f1_macro,0.6582043460370715,prototree-d0-base_v0,1,12
+f1_micro,0.6765625,prototree-d0-base_v0,1,12
+hlca,0.434375,prototree-d0-base_v0,1,12

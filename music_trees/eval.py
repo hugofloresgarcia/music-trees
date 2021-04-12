@@ -27,10 +27,12 @@ def evaluate(name: str, version: int):
     output_dir = exp_dir / 'tests'
     output_dir.mkdir(exist_ok=True)
 
-    model = load_model_from_ckpt(exp_dir)
+    ckpt_path = get_ckpt_path(exp_dir)
+    ckpt = torch.load(ckpt_path)
+    model = load_model_from_ckpt(ckpt_path)
     model = model.to(DEVICE)
 
-    tree = model.tree
+    tree = model.model.tree
 
     # setup transforms
     audio_tfm = mt.preprocess.LogMelSpec(hop_length=mt.HOP_LENGTH,
@@ -66,9 +68,12 @@ def evaluate(name: str, version: int):
     all_results = pd.concat(all_results)
     all_results.to_csv(output_dir / 'all_results.csv')
 
-    results_path = mt.ROOT_DIR / 'results' / f'{name}-v{version}.csv'
+    results_path = mt.ROOT_DIR / 'resuls' / f'{name}-v{version}.csv'
     results_path.parent.mkdir(exist_ok=True)
+
     all_results.to_csv(results_path)
+    for key, val in vars(ckpt['hyper_parameters']['hparams']).items():
+        all_results[key] = val
     print(all_results)
 
 
@@ -79,10 +84,14 @@ def prune_output(output: dict):
     return output
 
 
-def load_model_from_ckpt(exp_dir):
+def get_ckpt_path(exp_dir):
     ckpts = glob.glob(str(exp_dir / 'checkpoints' / '*.ckpt'))
     assert len(ckpts) == 1
-    return mt.models.core.ProtoTask.load_from_checkpoint(ckpts[0])
+    return ckpts[0]
+
+
+def load_model_from_ckpt(ckpt_path):
+    return mt.models.core.ProtoTask.load_from_checkpoint(ckpt_path)
 
 
 def batch2cuda(batch):

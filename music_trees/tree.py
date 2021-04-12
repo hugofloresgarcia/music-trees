@@ -246,7 +246,7 @@ class MusicTree(Tree):
         assert len(pred_path) == len(truth_path)
         for h, (pred_ancestor, truth_ancestor) in enumerate(zip(pred_path, truth_path)):
             if pred_ancestor == truth_ancestor:
-                return h - 1
+                return h
 
         raise ValueError
 
