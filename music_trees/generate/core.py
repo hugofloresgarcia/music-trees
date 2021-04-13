@@ -31,7 +31,11 @@ def _generate_records_from_file(item: dict):
     windows = mt.utils.audio.window(signal, window_len, hop_len)
 
     # augment if necessary
+    # TODO: need to figure out how to
+    # add effect_params to these entries.
+    # TODO: shouldn't use np.random inside transform
     if item['augment']:
+        raise NotImplementedError
         transform = mt.preprocess.RandomEffects()
         for i in range(NUM_AUGMENT_FOLDS):
             clips = [transform(sig) for sig in deepcopy(windows)]

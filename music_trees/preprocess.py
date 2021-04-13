@@ -6,6 +6,7 @@ import librosa
 import numpy as np
 
 
+# TODO: we don't need this anymore. This should be taken care of by the individual classification heads
 class EpisodicTransform:
 
     def __init__(self):

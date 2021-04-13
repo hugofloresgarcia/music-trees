@@ -40,7 +40,7 @@ def train(args):
                                         epi_tfm=episode_tfm)
 
     # set up model
-    task = mt.models.task.ProtoTask(args)
+    task = mt.models.task.MetaTask(args)
 
     # logging
     from pytorch_lightning.loggers import TestTubeLogger
@@ -127,7 +127,7 @@ if __name__ == '__main__':
 
     # add model arguments
     parser = mt.models.prototree.ProtoTree.add_model_specific_args(parser)
-    parser = mt.models.task.ProtoTask.add_model_specific_args(parser)
+    parser = mt.models.task.MetaTask.add_model_specific_args(parser)
 
     args = parser.parse_args()
 

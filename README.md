@@ -1,5 +1,9 @@
 # Music Trees
 
+Code todos:
+- [ ] fix audio augmentation bug in generate/core.py
+- [ ] finish writing TreeModel, MetaTree, ProtoTree, and add load_model() to MetaTask. 
+
 Leveraging Hierarchical Structures for Open World, Few Shot Musical Instrument Recognition
 
 requirements from github repos: 

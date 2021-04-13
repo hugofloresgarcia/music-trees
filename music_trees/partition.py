@@ -111,14 +111,13 @@ def hierarchical_partition(taxonomy: str, name: str, partitions: List[str],
     # shorten tree to desired depth
     tree = tree.shorten(depth)
 
-    # make sure the tree is even
+    # even out the tree's depth on all branches
     tree = tree.even_depth()
 
-    # prune out unwanted classes
-    # remove these two categories we know we don't want
+    # we dont want the 'other' class
     tree.remove_by_uids(['other'])
 
-    # load the records and get the classlist
+    # load the dataset's records from /data/ and get the classlist
     records = mt.utils.data.glob_all_metadata_entries(mt.DATA_DIR / name)
     classlist = mt.utils.data.get_classlist(records)
 
@@ -128,9 +127,13 @@ def hierarchical_partition(taxonomy: str, name: str, partitions: List[str],
     tree.fit_to_classlist(classlist)
     populate_tree_with_class_statistics(tree, records)
 
+    # make sure the user provided equal number of partitions and sizes
     assert len(partitions) == len(sizes)
+
+    # perform the hierarchical split!
     partition = _hierarchical_split(tree, depth, partitions, sizes)
 
+    # display the trees
     display_partition_subtrees(tree, partition, records)
 
     # save the partitions

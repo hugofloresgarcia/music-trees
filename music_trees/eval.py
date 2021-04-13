@@ -88,13 +88,15 @@ def get_ckpt_path(exp_dir):
 
 
 def load_model_from_ckpt(ckpt_path):
-    return mt.models.task.ProtoTask.load_from_checkpoint(ckpt_path)
+    return mt.models.task.MetaTask.load_from_checkpoint(ckpt_path)
 
 
 def batch2cuda(batch):
     for k, v in batch.items():
         if isinstance(v, torch.Tensor):
             batch[k] = v.to(DEVICE)
+        elif isinstance(v, dict):
+            batch[k] = batch2cuda(v)
     return batch
 
 

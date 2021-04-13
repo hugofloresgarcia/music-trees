@@ -1,4 +1,4 @@
-from music_trees.models.prototree import ProtoTree
+from music_trees.models import load_model
 
 from argparse import Namespace
 
@@ -7,7 +7,7 @@ import pytorch_lightning as pl
 from music_trees.utils.train import batch_detach_cpu
 
 
-class ProtoTask(pl.LightningModule):
+class MetaTask(pl.LightningModule):
 
     def __init__(self, hparams: Namespace):
         """Training and logging code
@@ -22,12 +22,12 @@ class ProtoTask(pl.LightningModule):
 
         Args:
             hparams ([Namespace]): model hyperparameters.
-        see ProtoTask.add_model_specific_args for a list of
+        see MetaTask.add_model_specific_args for a list of
         required hparams
         """
         super().__init__()
         self.save_hyperparameters()
-        self.model = ProtoTree(hparams.taxonomy_name, hparams.depth)
+        self.model = load_model(hparams)
         self.learning_rate = hparams.learning_rate
 
     @staticmethod

@@ -26,6 +26,7 @@ class TreeModel(pl.LightningModule):
         combines a layertree (for regular classification tasks) 
         and a metatree (for meta learning tasks)
         """
+        raise NotImplementedError
         super().__init__()
 
         taxonomy = mt.utils.data.load_entry(
@@ -40,7 +41,6 @@ class TreeModel(pl.LightningModule):
         self.linear_proj = nn.Linear(d_backbone, d_root)
 
         self.heads = load_heads()
-        raise NotImplementedError
 
     @staticmethod
     def add_model_specific_args(parent_parser):
