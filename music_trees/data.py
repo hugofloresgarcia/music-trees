@@ -125,6 +125,7 @@ class MetaDataset(torch.utils.data.Dataset):
         return files
 
     def cache_dataset(self):
+        """ cache all entries in the dataset """
         logging.info(f'caching dataset...')
 
         # go through all classnames
@@ -135,6 +136,10 @@ class MetaDataset(torch.utils.data.Dataset):
                 self.cache_if_needed(entry)
 
     def cache_if_needed(self, entry: dict):
+        """ Look for an entry in the cache. 
+        If the entry exists, read it from disk. 
+        If the entry does not exist, transform it 
+        and save it to disk """
         entry_path = self.cache_root / entry['uuid']
         if entry_path.exists():
             with open(entry_path, 'rb') as f:
@@ -150,6 +155,7 @@ class MetaDataset(torch.utils.data.Dataset):
         return cached_entry
 
     def transform_entry(self, entry: dict):
+        """ apply the audio transforms to a given entry """
         # load audio
         audio_path = Path(mt.utils.data.get_path(entry)).with_suffix('.wav')
         signal = AudioSignal(path_to_input_file=str(
@@ -161,21 +167,17 @@ class MetaDataset(torch.utils.data.Dataset):
             entry = self.audio_tfm(entry)
         return entry
 
-    def process_entry(self, entry: dict):
-        if self.audio_tfm is None:
-            return entry
-
-        cached_entry = self.cache_if_needed(entry)
-        return cached_entry
-
     def _get_example_for_class(self, name: str):
+        """ sample an entry from the dataset, 
+        that matches the given class name
+        """
         # grab a random file
         entry = dict(random.choice(self.files[name]))
         return entry
 
     def _process_episode(self, episode):
-        """apply process_item to all items in an episode"""
-        episode['records'] = [self.process_entry(
+        """apply transforms to all entries in an episode"""
+        episode['records'] = [self.cache_if_needed(
             itm) for itm in episode['records']]
 
         # apply episode transform
@@ -185,13 +187,16 @@ class MetaDataset(torch.utils.data.Dataset):
         return episode
 
     def _episode_cache_get(self, index):
+        """ retrieve from episode cache """
         return mt.utils.data.load_entry(self.epi_cache_root / str(index), format='json')
 
     def _episode_cache_set(self, index, item):
+        """ write to episode cache """
         mt.utils.data.save_entry(
             item, self.epi_cache_root / str(index), format='json')
 
     def _check_episode_cached(self, index):
+        """ check if index exists in episode cache """
         return Path(self.epi_cache_root / str(index)).exists()
 
     def generate_episode(self):
@@ -221,9 +226,11 @@ class MetaDataset(torch.utils.data.Dataset):
         """returns a dict with format:
 
         episode = {
-            'support': List[AudioSignal], 
-            'query': List[AudioSignal], 
-            'classlist': List[str],
+            'n_class' (int): number of classes
+            'n_shot' (int): number of shots
+            'n_query' (int): number of query examples
+            'classlist' (List[str]): list of classes
+            'records' (List[dict]): list of dataset entries
         }
         """
         if self.deterministic and self._check_episode_cached(index):
@@ -267,6 +274,7 @@ class MetaDataModule(pl.LightningDataModule):
         self.kwargs = kwargs
 
     def setup(self, stage=None):
+        """ setup and cache datasets """
         # load all partitions
         partition = mt.utils.data.load_entry(
             mt.ASSETS_DIR / self.name / 'partition.json')
