@@ -17,11 +17,12 @@ GRAD_CLIP = 1
 
 
 def get_exp_dir(name: str, version: int):
+    """ get the path to experiment """
     return Path(mt.RUNS_DIR) / name / f"version_{version}"
 
 
 def train(args):
-
+    """ train a model """
     # setup transforms
     audio_tfm = mt.preprocess.LogMelSpec(hop_length=mt.HOP_LENGTH,
                                          win_length=mt.WIN_LENGTH)
@@ -39,7 +40,7 @@ def train(args):
                                         epi_tfm=episode_tfm)
 
     # set up model
-    task = mt.models.core.ProtoTask(args)
+    task = mt.models.task.ProtoTask(args)
 
     # logging
     from pytorch_lightning.loggers import TestTubeLogger
@@ -126,7 +127,7 @@ if __name__ == '__main__':
 
     # add model arguments
     parser = mt.models.prototree.ProtoTree.add_model_specific_args(parser)
-    parser = mt.models.core.ProtoTask.add_model_specific_args(parser)
+    parser = mt.models.task.ProtoTask.add_model_specific_args(parser)
 
     args = parser.parse_args()
 

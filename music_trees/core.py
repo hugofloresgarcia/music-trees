@@ -6,11 +6,6 @@ import logging
 import pytorch_lightning as pl
 import nussl
 
-###############################################################################
-# Constants
-###############################################################################
-
-
 # Static directories
 ASSETS_DIR = Path(__file__).parent / 'assets'
 ROOT_DIR = Path(__file__).parent.parent

@@ -1,117 +1,108 @@
-# Deep learning project template
+# Music Trees
 
-Throughout this template, `NAME` is used to refer to the name of the project
-and `DATASET` is used to refer to the name of a dataset.
+Leveraging Hierarchical Structures for Open World, Few Shot Musical Instrument Recognition
 
+TODO: add links
+requirements from github repos: 
+
+- medleydb from [marl](https://github.com/marl/medleydb)
+- audio-utils made my [me](https://github.com/hugofloresgarcia/audio-utils)
 
 ## Installation
 
-Clone this repo and run `cd NAME && pip install -e .`.
+clone the repo and install with
+```bash 
+pip install -e .
+```
 
 ## Usage
 
-### Download data
+### Generate data
 
-Place datasets in `data/DATASET`, where `DATASET` is the name of the dataset.
+##### MedleyDB
+Make sure the `MEDLEYDB_PATH` environment variable is set. Then, run the
+generation script:
 
+```bash
+python -m music_trees.generate \
+                --dataset medleydb \
+                --name mdb \
+                --example_length 1.0 \
+                --augment false \
+                --hop_length 1.0 \
+                --sample_rate 16000 \
+```
+
+##### Katunog
+In `/generate/katunog.py`, change `RAW_DOWNLOAD_DIR` to the path where you would like to store the raw dataset data (do **not** store in `/data/`).
+
+Run the generation script:
+
+```bash
+python -m music_trees.generate \
+                --dataset katunog \
+                --name katunog \
+                --example_length 1.0 \
+                --augment false \
+                --hop_length 1.0 \
+                --sample_rate 16000 \
+```
 
 ### Partition data
 
-Complete all TODOs in `partition.py`, then run `python -m NAME.partition
-DATASET`.
+Partitions are written to `music_trees/assets/<DATASET_NAME>/partition.json`. 
+
+Create a hierarchical train-val split with depth 1 for medleydb:
+
+```bash
+python music_trees/partition.py \
+                --taxonomy joint-taxonomy \
+                --name mdb 
+                --partitions train val
+                --sizes 0.7 0.3
+                --depth 1
+```
 
 
 ### Preprocess data
 
-Complete all TODOs in `preprocess.py`, then run `python -m NAME.preprocess
-DATASET`. All preprocessed data is saved in `cache/DATASET`.
+Preprocessing and caching is done on the fly, so no need to worry about running a script. 
 
+The `MetaDataset` object stores cached **entries** (aka dicts of inputs, targets and metadata) as `pickle` objects in `/cache/<DATASET_NAME>/<TRANSFORM>`, where `<TRANSFORM>` is the preprocessing transform (most of the time a spectrogram). 
 
-### train
+For deterministic purposes (validation and evaluation), set `deterministic=True`. This way, episode metadata is also cached for a particular combination of `n_shot`, `n_query`, `n_class`. 
 
-```bash 
-export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py --name baseline-mdb --dataset mdb --batch_size 2  --num_workers 20  --learning_rate 0.03  
-```
+### Train
 
-debug
-```bash 
-export CUDA_VISIBLE_DEVICES='0' && python -m ipdb  music_trees/train.py --name tree-debug --dataset mdb --batch_size 1  --num_workers 0  --learning_rate 0.03  --depth 2
-```
+Training runs are stored under `/runs/<NAME>/<VERSION>`. You shouldn't have to specify a version when running the script, as the version number is inferred automatically. If you are resuming from a checkpoint, then do specify the version. 
 
-### test
+see `python train.py -h` for the full list of args provided by the pytorch lightning trainer. 
 
 ```bash 
-export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py --test true --name baseline-mdb --version 1 --dataset katunog --batch_size 2  --num_workers 20  --learning_rate 0.03  
+export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py --name <NAME> --dataset mdb --num_workers 20  --learning_rate 0.03  
 ```
 
 ### Evaluate
 
-Complete all TODOs in `evaluate.py`, then run `python -m NAME.evaluate DATASET
-<partition> <checkpoint> <file>`, where `<partition>` is the name of the
-partition to evaluate, `<checkpoint>` is the checkpoint file to evaluate, and
-`<file>` is the json file to write results to.
+Both name and version are required here, since we're loading a previously trained model. 
 
+To evaluate a model:
+```bash
+export CUDA_VISIBLE_DEVICES='0' && python music_trees/eval.py --name <NAME> --version <VERSION>
+```
 
 ### Infer
 
-Complete all TODOs in `infer.py`, then run `python -m NAME.infer
-<input_file> <output_file> <checkpoint_file>`.
+(todo)
 
 
 ### Monitor
 
-Run `tensorboard --logdir runs/<run>/logs`. If you are running training
+Run `tensorboard --logdir runs`. If you are running training
 remotely, you must create a SSH connection with port forwarding to view
 Tensorboard. This can be done with `ssh -L 6006:localhost:6006
-<user>@<server-ip-address>`. Then, open `localhost:6006` in your browser.
+<user>@<server-ip-address>`. Then, open `localhost:6006` in your browser. 
 
+TODO: add docs for visualizing with emb-viz
 
-### Test
-
-Tests are written using `pytest`. Run `pip install pytest` to install pytest.
-Complete all TODOs in `test_model.py` and `test_data.py`, then run `pytest`.
-Adding project-specific tests for preprocessing and inference is encouraged.
-
-
-## FAQ
-
-### What is the directory `NAME/assets` for?
-
-This directory is for
-[_package data_](https://packaging.python.org/guides/distributing-packages-using-setuptools/#package-data).
-When you pip install a package, pip will
-automatically copy the python files to the installation folder (in
-`site_packages`). Pip will _not_ automatically copy files that are not Python
-files. So if your code depends on non-Python files to run (e.g., a pretrained
-model, normalizing statistics, or data partitions), you have to manually
-specify these files in `setup.py`. This is done for you in this repo. In
-general, only small files that are essential at runtime should be placed in
-this folder.
-
-
-### What if I have an especially complex preprocessing pipeline?
-
-I recommend one of two designs.
-1. Replace `preprocess.py` with a `preprocess` submodule. This will
-be a directory `NAME/preprocess` that contains a module initialization script
-`__init__.py`, an entry point `__main__.py`, and the rest of your preprocessing
-code.
-2. Implement only the entry point in `preprocess.py`. Move the data
-transformations to either a new file `transform.py` or new `transform`
-submodule.
-
-
-### What if my evaluation includes subjective experiments?
-
-In this case, replace the `<file>` argument of `NAME.evaluate` with a
-directory. Write any objective metrics to a file within this directory, as well
-as any generated files that will be subjectively evaluated. If evaluation
-is especially complex, consider making an `evaluate` submodule.
-
-
-### How do I release my code so that it can be downloaded via pip?
-
-Code release involves making sure that `setup.py` is up-to-date and then
-uploading your code to [`pypi`](https://www.pypi.org).
-[Here](https://packaging.python.org/tutorials/packaging-projects/) is a good
-tutorial for this process.
+*or through visual studio code if you're cool*

@@ -40,15 +40,16 @@ class LayerTree(nn.Module):
         super().__init__()
         self.root_d = root_d
         self.tree = tree
+        self.is_meta = False
 
         nodes = []
-        for i in range(2, 2+depth):
+        for i in range(1, 1+depth):
             nodes.append([n.uid for n in tree.all_nodes_at_depth(i)])
 
-        self.layers, self.classifiers = self.create_sparse_layers(
+        self.layers, self.classifiers = self.build_model(
             root_d, nodes)
 
-    def forward(self, x):
+    def forward(self, episode, output):
         """given an input tensor,
         will forward pass through each layer in the tree,
         completing a classification task and getting an embedding.
@@ -56,7 +57,7 @@ class LayerTree(nn.Module):
         """
         tasks = []
 
-        x_in = x
+        x_in = episode['root_embedding']
         for depth, (layerdict, classifier) in enumerate(zip(self.layers, self.classifiers)):
             # get "expert" embeddings for each node at this level
             embs = OrderedDict([(name, layer(x_in))
@@ -80,7 +81,7 @@ class LayerTree(nn.Module):
                 'embedding': odcat(embs, dim=-1),
                 'probs': odcat(probs, dim=-1),
                 'classlist': list(embs.keys()),
-                'tag': f'layertree-{depth}'
+                'tag': f'layertree-d{depth}'
             }
             tasks.append(task)
 
@@ -88,7 +89,10 @@ class LayerTree(nn.Module):
 
         return tasks
 
-    def find_ancestor_labels(self, labels, ancestor_classlist):
+    def find_ancestor_labels(self, labels: list, ancestor_classlist: list):
+        """ given a list of fine grained labels and a classlist of ancestors, 
+        checks the tree and finds the ancestor for each label. returns the list of 
+        ancestors"""
         ancestor_labels = []
         for l in labels:
             ancestor = [
@@ -99,12 +103,7 @@ class LayerTree(nn.Module):
 
     def compute_losses(self, output: dict, criterion: callable):
         labels = output['labels']
-        assert isinstance(labels[0], list)
-
-        # maybe the labels should already be flattened by the time they're here?
-        # maybe not
-        def flatten_list(l): return [i for s in l for i in s]
-        labels = flatten_list(labels)
+        assert isinstance(labels[0], str)
 
         # grab the list of tasks, should be a List[Dict]
         tasks = output['tasks']
@@ -130,7 +129,7 @@ class LayerTree(nn.Module):
         return output
 
     @staticmethod
-    def create_sparse_layers(root_d: int, nodes: List[List[str]]):
+    def build_model(root_d: int, nodes: List[List[str]]):
         layers = nn.ModuleList()
         classifiers = nn.ModuleList()
 

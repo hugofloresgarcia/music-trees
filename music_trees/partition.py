@@ -116,7 +116,7 @@ def hierarchical_partition(taxonomy: str, name: str, partitions: List[str],
 
     # prune out unwanted classes
     # remove these two categories we know we don't want
-    tree.remove_by_tags(['other'])
+    tree.remove_by_uids(['other'])
 
     # load the records and get the classlist
     records = mt.utils.data.glob_all_metadata_entries(mt.DATA_DIR / name)
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     parser.add_argument('--sizes', type=float, required=True, nargs='+',
                         help='proportion of partitions to allocate to each partition, example: "--sizes 0.3 0.5 0.2"')
 
-    parser.add_argument('--depth',     type=int, default=2,
+    parser.add_argument('--depth',     type=int, default=1,
                         help='depth of the tree on which to perform the split')
 
     hierarchical_partition(**vars(parser.parse_args()))

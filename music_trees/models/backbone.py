@@ -1,7 +1,6 @@
 from functools import reduce
 from operator import __add__
 
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -18,7 +17,7 @@ class ConvBlock(nn.Module):
                              [(k // 2 + (k - 2 * (k // 2)) - 1, k // 2) for k in kernel_size[::-1]])
         else:
             raise ValueError(
-                ' implemented anything other than same padding and stride 1')
+                'not implemented anything other than same padding and stride 1')
 
         self.pad = nn.ZeroPad2d(padding)
         self.conv = nn.Conv2d(in_channels=in_channels,  out_channels=out_channels,

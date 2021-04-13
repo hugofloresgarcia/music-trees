@@ -1,6 +1,4 @@
-""" tree.py - TODO: write desc and fill docstrings """
 from copy import deepcopy
-import warnings
 
 import medleydb as mdb
 from treelib.tree import Tree
@@ -27,27 +25,12 @@ class MusicNode(Node):
         if self.data is None:
             self.data = DotDict()
 
-    @staticmethod
-    def new_unique(other):
-        """ 
-        creates a new unique
-        instance, copying the data but adding a _ to its id
-        the pointers are not copied. 
-        """
-        new = MusicNode(uid=other.uid+'_')
-        new.data = deepcopy(other.data)
-        return new
-
     @property
     def uid(self):
         return self.identifier
 
     def __repr__(self):
         return f"{self.uid}-{self.data.keys()}"
-
-    # def __deepcopy__(self, memo=None):
-    #     # make a deepcopy of self, but give it a new id
-    #     other = deepcopy(self, memo=memo)
 
 
 class MusicTree(Tree):
@@ -63,12 +46,16 @@ class MusicTree(Tree):
                 self.create_node('root')
 
     def depth(self, node=None):
-        return super().depth(node) + 1
+        """ return the depth of the tree"""
+        return super().depth(node)
 
     def create_node(self, uid: str, parent=None):
         return super().create_node(identifier=uid, parent=parent)
 
     def _r_make_tree(self, parent: Node, taxonomy: dict):
+        """ recursive function for building a tree from a
+        taxonomy dict.
+        """
         for name, subtaxonomy in taxonomy.items():
             if isinstance(subtaxonomy, dict):
                 child = self.create_node(name, parent=parent)
@@ -82,19 +69,22 @@ class MusicTree(Tree):
 
     @staticmethod
     def from_taxonomy(taxonomy: dict):
+        """ creates a new tree from an instrument taxonomy dict
+        """
         this = MusicTree(node_class=MusicNode)
         root = this.root
         this._r_make_tree(root, taxonomy)
         return this
 
     def fit_to_classlist(self, classlist: list):
-        """ 
-        prunes all leaves and from the tree so the only
-        remaining leaves are those in classlist. 
+        """
+        fits a tree to a classlist.
+        that is, given a list of fine-grained labels, this function
+        will remove all leaf nodes in this tree whose uids are not
+        present in the classlist.
 
-        if a class from `classlist` is not a leaf node in the tree, 
-        raises an error.  
-
+        if a class from `classlist` is not a leaf node in the tree,
+        raises an error.
         """
         # first, assert that we will find the whole classlist
         # as leaf nodes in the tree
@@ -124,9 +114,7 @@ class MusicTree(Tree):
         return self
 
     def all_nodes_at_depth(self, depth: int):
-        """ returns a list of nodes at a given depth 
-            if get_shallow_leaves is True, also returns 
-            all leaf nodes shallower than depth
+        """ returns a list of nodes at a given depth
         """
         nodes = []
         for node in self.all_nodes():
@@ -134,22 +122,26 @@ class MusicTree(Tree):
                 nodes.append(node)
         return nodes
 
-    def remove_by_tags(self, tags: list):
-        for tag in tags:
+    def remove_by_uids(self, uids: list):
+        """ remove nodes given a list of node uids """
+        for tag in uids:
             node = self.get_node(tag)
             if node is not None:
                 self.remove_node(node.uid)
         return self
 
     def is_leaf(self, node):
+        """ is leaf """
         return self.is_branch(node.uid) == []
 
     def filter_tree(self, condition: callable):
         """
-        creates a new subtree only for the nodes 
+        creates a new subtree only for the nodes
         that satisfy the condition provided by the user
 
-        the input `fn` will be passed the tree and the node 
+        the arg `condition` will be called like this:
+        condition(other, node), where other is a copy of
+        this tree, and node is the node being examined at the time.
         """
         other = MusicTree(tree=self, deep=True)
         for node in self.all_nodes():
@@ -172,14 +164,14 @@ class MusicTree(Tree):
             paths = list(self.paths_to_leaves())
 
     def even_depth(self):
-        """ 
-        this is probably unnecessarily O(n^2)
+        """
+        this is probably unnecessarily O(n ^ 2)
 
         modifies the tree, such that
-        the length of all paths from the root node to any 
+        the length of all paths from the root node to any
         leaf node is equal. This is done by inserting a new
         parent to the leaf node in each path, in a loop until
-        the uniform depth requirement is met 
+        the uniform depth requirement is met
         """
         max_depth = self.depth()
 
@@ -209,7 +201,7 @@ class MusicTree(Tree):
         return self
 
     def shorten(self, depth: int):
-        """ remove parents from leaves until 
+        """ remove parents from leaves until
         the maximum depth of the tree is the depth provided
         """
         # we wanna cut the parents so depth is +1
@@ -228,7 +220,7 @@ class MusicTree(Tree):
         return self
 
     def is_even(self):
-        """ 
+        """
         returns true if the lengths of all paths from the root
         to each leaf is of equal length
         """
@@ -251,7 +243,7 @@ class MusicTree(Tree):
         raise ValueError
 
     def get_ancestor(self, nid: str, height: int):
-        """ finds the ancestor of the node at a particular height. 
+        """ finds the ancestor of the node at a particular height.
         if the height is 0, returns the node itself
         """
         all_paths = self.paths_to_leaves()
@@ -268,7 +260,7 @@ if __name__ == "__main__":
     taxonomy = mdb.INST_TAXONOMY
 
     tree = MusicTree.from_taxonomy(taxonomy)
-    print(tree.hlca('xylophone', 'marimba'))  # 0
-    print(tree.hlca('violin', 'viola'))  # 0
-    print(tree.hlca('dulcimer', 'sitar'))  # 1
-    print(tree.hlca('dizi', 'sitar'))  # 2
+    print(tree.hlca('xylophone', 'marimba'))  # 1
+    print(tree.hlca('violin', 'viola'))  # 2
+    print(tree.hlca('dulcimer', 'dulcimer'))  # 0
+    print(tree.hlca('dizi', 'sitar'))  # 3
