@@ -2,7 +2,6 @@
 
 Leveraging Hierarchical Structures for Open World, Few Shot Musical Instrument Recognition
 
-TODO: add links
 requirements from github repos: 
 
 - medleydb from [marl](https://github.com/marl/medleydb)
