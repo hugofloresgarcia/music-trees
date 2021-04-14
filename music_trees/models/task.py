@@ -1,42 +1,66 @@
 from embviz.logger import EmbeddingSpaceLogger
-from music_trees.models.core import load_model
+from music_trees.models.protonet import HierarchicalProtoNet
+from music_trees.utils.train import batch_detach_cpu
 
 from argparse import Namespace
 
 import torch
 import pytorch_lightning as pl
-from music_trees.utils.train import batch_detach_cpu
 
 
 class MetaTask(pl.LightningModule):
 
-    def __init__(self, hparams: Namespace):
+    def __init__(self, args: Namespace):
         """Training and logging code
         for both meta-learning and regular classification
         tasks.
 
-        one of the required hparams is hparams.model_name.
+        one of the required args is args.model_name.
         It should be the name of a model. See the list
-        of available models at mt.models.core.load_model().
+        of available models at mt.models.task.load_model().
 
         to access the model, use the `.model` attribute.
 
         Args:
-            hparams ([Namespace]): model hyperparameters.
+            args ([Namespace]): model hyperparameters.
+
         see MetaTask.add_model_specific_args for a list of
-        required hparams
+        required args
         """
         super().__init__()
         self.save_hyperparameters()
-        self.model = load_model(hparams.model_name)
-        self.learning_rate = hparams.learning_rate
+        self.model = self.load_model(args)
+        self.learning_rate = args.learning_rate
+
+    def load_model(self, args):
+        """ loads the actual model object"""
+        if args.model_name.lower() == 'hprotonet':
+            model = HierarchicalProtoNet(args)
+        else:
+            raise ValueError(f"invalid model name: {args.model_name}")
+
+        return model
+
+    @staticmethod
+    def load_model_parser(parser, args):
+        """ 
+        depending on the model_name provided by the user, 
+        this will finish adding model specific Argparse args for the 
+        model that this task object holds
+        """
+        if args.model_name.lower() == 'hprotonet':
+            parser = HierarchicalProtoNet.add_model_specific_args(parser)
+        else:
+            raise ValueError(f"invalid model name: {args.model_name}")
+
+        return parser
 
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = parent_parser
         parser.add_argument('--model_name', type=str, required=True,
-                            help='name of model variant to load. see mt.models.core.load_model')
-        parser.add_argument('--learning_rate', type=float, default=0.003,
+                            help='name of model variant to load. see mt.models.task.load_model_parser')
+        parser.add_argument('--learning_rate', type=float, default=0.03,
                             help='learning rate for training. will be decayed using MultiStepLR')
 
         return parser

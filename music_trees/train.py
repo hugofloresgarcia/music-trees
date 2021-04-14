@@ -121,6 +121,12 @@ if __name__ == '__main__':
     # add model arguments
     parser = mt.models.task.MetaTask.add_model_specific_args(parser)
 
+    # load arguments specific to model
+    args, _ = parser.parse_known_args()
+
+    # add model specific arguments for model
+    parser = mt.models.task.MetaTask.load_model_parser(parser, args)
+
     args = parser.parse_args()
 
     train(args)

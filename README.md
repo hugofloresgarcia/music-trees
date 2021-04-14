@@ -77,8 +77,20 @@ Training runs are stored under `/runs/<NAME>/<VERSION>`. You shouldn't have to s
 
 see `python train.py -h` for the full list of args provided by the pytorch lightning trainer. 
 
+**note**: because we want swap models without modifying the overall training logic, 
+the actual model architecture is wrapped in `models.task.MetaTask` object, which takes care of defining optimizers, loading the actual model, and logging. One of the args required by `MetaTask` is `model_name`, which is the name of the actual model to load. 
+
+To view what models are available, see `MetaTask.load_model_parser`. Note that each model under `load_model_parser` has its own set of required hyperparameters. For example, the required args for `hprotonet` (`HierarchicalProtoNet`) are `d_root`, `height`, and `taxonomy_name`. Each model has its own `add_model_specific_args` function, where you can look at the required arguments, default values, and help strings. 
+
 ```bash 
-export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py --name <NAME> --dataset mdb --num_workers 20  --learning_rate 0.03  
+export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py \
+                                            --model_name hprotonet \
+                                            --height 0 \
+                                            --d_root 128 \ 
+                                            --name <NAME> \
+                                            --dataset mdb \
+                                            --num_workers 20  \
+                                            --learning_rate 0.03  
 ```
 
 ##### training with a batch size greater than 1

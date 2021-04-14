@@ -34,7 +34,6 @@ def evaluate(name: str, version: int):
     # setup transforms
     audio_tfm = mt.preprocess.LogMelSpec(hop_length=mt.HOP_LENGTH,
                                          win_length=mt.WIN_LENGTH)
-    epi_tfm = mt.preprocess.EpisodicTransform()
 
     all_results = []
     for n_shot in N_SHOT:
@@ -44,7 +43,6 @@ def evaluate(name: str, version: int):
             name=DATASET, batch_size=1, num_workers=NUM_WORKERS,
             n_episodes=N_EPISODES, n_class=N_CLASS,
             n_shot=n_shot, n_query=N_QUERY, audio_tfm=audio_tfm,
-            epi_tfm=epi_tfm
         )
         dm.setup('test')
 
@@ -52,8 +50,6 @@ def evaluate(name: str, version: int):
         for index, batch in tqdm(enumerate(dm.test_dataloader())):
             batch = batch2cuda(batch)
             output = model.eval_step(batch, index)
-            output['tasks'].append(output['proto_task'])
-            output = prune_output(output)
             outputs.append(output)
 
         results = pd.DataFrame(metrics(outputs, tree))
@@ -72,13 +68,6 @@ def evaluate(name: str, version: int):
     for key, val in vars(ckpt['hyper_parameters']['hparams']).items():
         all_results[key] = val
     print(all_results)
-
-
-def prune_output(output: dict):
-    del output['backbone']
-    del output['embedding']
-    del output['records']
-    return output
 
 
 def get_ckpt_path(exp_dir):

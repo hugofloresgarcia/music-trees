@@ -1,7 +1,9 @@
+from music_trees.models.backbone import Backbone
 import music_trees as mt
 
+from typing import List, OrderedDict, Dict
+from argparse import Namespace
 from collections import OrderedDict
-from typing import List, Dict
 
 import torch
 import torch.nn as nn
@@ -37,25 +39,66 @@ class HierarchicalProtoNet(nn.Module):
     if height == 0, just computes a regular prototypical net loss
     """
 
-    def __init__(self, height: int):
+    def __init__(self, args: Namespace):
         super().__init__()
-        assert height >= 0
-        self.height = height
 
-        self.is_meta = True
+        self.backbone = Backbone()
+        self._backbone_shape = self._get_backbone_shape()
+        d_backbone = self._backbone_shape[-1]
+
+        self.linear_proj = nn.Linear(d_backbone, args.d_root)
+
+        assert args.height >= 0
+        self.height = args.height
 
         taxonomy = mt.utils.data.load_entry(
-            mt.ASSETS_DIR/'taxonomies'/f'joint-taxonomy.yaml', 'yaml')
+            mt.ASSETS_DIR/'taxonomies'/f'{args.taxonomy_name}.yaml', 'yaml')
         self.tree = mt.tree.MusicTree.from_taxonomy(taxonomy)
 
         self.loss_decay = 2
+
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+        parser = parent_parser
+        parser.add_argument('--d_root', type=int, default=128,
+                            help="root dimension")
+        parser.add_argument('--height', type=int, default=0,
+                            help="height of prototypical loss")
+        parser.add_argument('--taxonomy_name', type=str, default='joint-taxonomy',
+                            help="name of taxonomy file. must be in \
+                                    music_trees/assets/taxonomies")
+        return parser
+
+    def _get_backbone_shape(self):
+        # do a dummy forward pass through the3
+        # embedding model to get the output shape
+        i = torch.randn((1, 1, 128, 199))
+        o = self.backbone(i)
+        return o.shape
+
+    def root_forward(self, x):
+        """
+        forward pass through the backbone model, as well as the
+        linear projection. Returns the root embedding as output
+        """
+        # input should be shape (b, c, f, t)
+        backbone_embedding = self.backbone(x)
+        root_embedding = self.linear_proj(backbone_embedding)
+
+        return root_embedding
 
     def forward(self, episode: dict):
         """ 
         forward pass through prototypical net
         will output a single metatask, wrapped in a list. 
         """
-        x = episode['root_embedding']
+        # after collating, x should be
+        # shape (batch, n_c*n_k + n_q, -1)
+        x = episode['x']
+
+        # forward pass through backbone
+        x = self.root_forward(x)
+
         n_k = episode['n_shot']
         n_c = episode['n_class']
         x_q = episode['n_query']
@@ -91,7 +134,7 @@ class HierarchicalProtoNet(nn.Module):
             'tag': 'protonet'
         }
 
-        return [metatask]
+        return {'tasks': [metatask]}
 
     def get_ancestor_classlist(self, classlist: List[str], height: int):
         # get a 1-to-1 mapping from the parents to ancestors
@@ -247,12 +290,12 @@ class HierarchicalProtoNet(nn.Module):
 
         return ancestor_metatasks
 
-    def compute_losses(self, episode: dict, tasks: dict):
+    def compute_losses(self, episode: dict, output: dict):
         """ 
         main entry point. calculates both the leaf losses
         and ancestor losses
         """
-        input_task = tasks[0]
+        input_task = output['tasks'][0]
         assert input_task['tag'] == 'protonet'
 
         leaf_task = self.compute_leaf_loss(episode, input_task)
@@ -261,4 +304,8 @@ class HierarchicalProtoNet(nn.Module):
         # insert metatasks in ascending order
         metatasks = [leaf_task] + ancestor_tasks
 
-        return metatasks
+        output['loss'] = sum(t['loss']*t['loss_weight']
+                             for t in output['tasks'])
+
+        output['tasks'] = metatasks
+        return output
