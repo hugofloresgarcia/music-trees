@@ -6,29 +6,6 @@ import librosa
 import numpy as np
 
 
-# TODO: we don't need this anymore. This should be taken care of by the individual classification heads
-class EpisodicTransform:
-
-    def __init__(self):
-        """ 
-        wrapper for using regular single-example transforms with an episodic
-        dataset
-
-        the provided audio_tfm must convert the AudioSignals to numpy arrays!!!!!
-        """
-
-    def __call__(self, episode):
-        # get the list of classes
-        classlist = episode['classlist']
-        x = np.stack([e['audio'] for e in episode['records']])
-        labels = [e['label'] for e in episode['records']]
-        # only grab targets for the query set
-        proto_target = np.stack([np.argmax(get_one_hot(e['label'], classlist), axis=0)
-                                 for e in episode['records'][episode['n_shot']*episode['n_class']:]])
-        episode.update(dict(x=x, labels=labels, proto_target=proto_target))
-        return episode
-
-
 class RandomEffects:
 
     def __init__(self, effect_chain=None):

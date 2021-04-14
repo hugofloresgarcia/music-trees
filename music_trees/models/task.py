@@ -1,4 +1,5 @@
-from music_trees.models import load_model
+from embviz.logger import EmbeddingSpaceLogger
+from music_trees.models.core import load_model
 
 from argparse import Namespace
 
@@ -18,7 +19,7 @@ class MetaTask(pl.LightningModule):
         It should be the name of a model. See the list
         of available models at mt.models.core.load_model().
 
-        to access the model, access the `.model` attribute.
+        to access the model, use the `.model` attribute.
 
         Args:
             hparams ([Namespace]): model hyperparameters.
@@ -27,7 +28,7 @@ class MetaTask(pl.LightningModule):
         """
         super().__init__()
         self.save_hyperparameters()
-        self.model = load_model(hparams)
+        self.model = load_model(hparams.model_name)
         self.learning_rate = hparams.learning_rate
 
     @staticmethod
@@ -50,8 +51,7 @@ class MetaTask(pl.LightningModule):
         output.update(episode)
 
         # compute losses
-        output = self.model.compute_multitask_proto_losses(output, episode)
-        output = self.model.compute_losses(output)
+        output = self.model.compute_losses(episode, output)
 
         # last, add the index for logging
         output['index'] = index
@@ -95,23 +95,15 @@ class MetaTask(pl.LightningModule):
         output should have:
             loss: tensor that contains the main loss
             index: episode index
-            tasks (List[dict]): a list of regular classification tasks, 
+            tasks (List[dict]): a list of classification tasks, 
                 where each task is a dictionary with fields:
+                    is_meta: bool indicating whether this is a meta task or 
+                                regular classification
                     classlist: list of classes in task
                     pred: predictions as a 1d array
                     target: targets as a 1d array
                     tag: a unique name for the task
-
-            metatasks  (List[dict]): a list of a meta learning tasks, 
-                where each task is a dictionary with fields:
-                    classlist: list of classes in task
-                    pred: predictions as a 1d array
-                    target: targets as a 1d array
-                    tag: a unique name for the task
-                    records (List[dict]): list of records as output by the 
-                                        dataset (for embedding space loggers)
                     n_shot, n_class, n_query (see dataset)
-
         """
         self.log(f'loss/{stage}', output['loss'].detach().cpu())
 
@@ -119,7 +111,6 @@ class MetaTask(pl.LightningModule):
 
         # grab the list of all tasks
         tasks = output['tasks']
-        tasks.extend(output['metatasks'])
         for task in tasks:
             self.log_classification_task(task, stage)
 
@@ -161,7 +152,7 @@ class MetaTask(pl.LightningModule):
     def visualize_embedding_space(self, output: dict, stage: str):
         """ visualizes the embedding space for a single episode """
         if not hasattr(self, 'emb_loggers'):
-            return
+            self.emb_loggers = {}
 
         records = output['records']
         n_support = output['n_shot'] * output['n_class']
@@ -170,26 +161,36 @@ class MetaTask(pl.LightningModule):
         # class index to class name
         def gc(i): return output['classlist'][i]
 
-        for metatask in output['metatasks']:
+        metatasks = [t for t in output['tasks'] if t['is_meta']]
+
+        for metatask in metatasks:
             embeddings = [e for e in metatask['support_embedding']] + \
                 [e for e in metatask['query_embedding']]
+
             labels = [r['label'] for r in records]
+            if 'label_dict' in metatask:
+                labels = [metatask['label_dict'][l] for l in labels]
+
             metatypes = ['support'] * n_support + ['query'] * n_query
             audio_paths = [r['audio_path'] for r in records]
 
             # also visualize the prototypes, though without audio
-            for p_emb, label in zip(metatask['prototype_embedding'], output['classlist']):
+            for p_emb, label in zip(metatask['prototype_embedding'], metatask['classlist']):
                 embeddings.append(p_emb)
                 labels.append(label)
                 metatypes.append('proto')
                 audio_paths.append(None)
 
             embeddings = torch.stack(embeddings).detach().cpu().numpy()
-            # TODO: also need to have emb loggers per task.
-            # I should rewrite embviz to use pkl instead shelve
-            self.emb_loggers[stage].add_step(step_key=str(self.global_step), embeddings=embeddings, symbols=metatypes,
-                                             labels=labels, metadata={'audio_path': audio_paths}, title='meta space')
-            raise NotImplementedError
+
+            # one logger per metatask, per partition (train, val, test)
+            logger_key = f'{metatask["tag"]}-{stage}'
+            if logger_key not in self.emb_loggers:
+                self.emb_loggers[logger_key] = EmbeddingSpaceLogger(
+                    self.exp_dir / 'embeddings' / logger_key)
+
+            self.emb_loggers[logger_key].add_step(step_key=str(self.global_step), embeddings=embeddings, symbols=metatypes,
+                                                  labels=labels, metadata={'audio_path': audio_paths}, title='meta space')
 
     def configure_optimizers(self):
         """Configure optimizer for training"""

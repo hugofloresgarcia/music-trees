@@ -26,7 +26,6 @@ def train(args):
     # setup transforms
     audio_tfm = mt.preprocess.LogMelSpec(hop_length=mt.HOP_LENGTH,
                                          win_length=mt.WIN_LENGTH)
-    episode_tfm = mt.preprocess.EpisodicTransform()
 
     # set up data
     datamodule = mt.data.MetaDataModule(name=args.dataset,
@@ -36,8 +35,7 @@ def train(args):
                                         n_class=args.n_class,
                                         n_shot=args.n_shot,
                                         n_query=args.n_query,
-                                        audio_tfm=audio_tfm,
-                                        epi_tfm=episode_tfm)
+                                        audio_tfm=audio_tfm)
 
     # set up model
     task = mt.models.task.MetaTask(args)
@@ -99,11 +97,7 @@ def train(args):
         num_sanity_val_steps=0,
         move_metrics_to_cpu=True)
 
-    if not args.test:
-        trainer.fit(task, datamodule=datamodule)
-    else:
-        results = trainer.test(task, datamodule=datamodule)
-        return results
+    trainer.fit(task, datamodule=datamodule)
 
 
 if __name__ == '__main__':
@@ -120,14 +114,11 @@ if __name__ == '__main__':
                         help='name of the experiment')
     parser.add_argument('--version', type=int, required=False,
                         help='version. If not provided, a new version is created')
-    parser.add_argument('--test', type=str2bool, default=False,
-                        required=False)
 
     # add datamodule arguments
     parser = mt.data.MetaDataModule.add_argparse_args(parser)
 
     # add model arguments
-    parser = mt.models.prototree.ProtoTree.add_model_specific_args(parser)
     parser = mt.models.task.MetaTask.add_model_specific_args(parser)
 
     args = parser.parse_args()

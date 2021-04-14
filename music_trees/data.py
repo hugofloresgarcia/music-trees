@@ -67,7 +67,7 @@ def slugify(value, allow_unicode=False):
 class MetaDataset(torch.utils.data.Dataset):
 
     def __init__(self, name: str, partition: str, n_episodes: int, n_class: int, n_shot: int,
-                 n_query: int, audio_tfm=None, epi_tfm=None, deterministic=False):
+                 n_query: int, audio_tfm=None, deterministic=False):
         """pytorch dataset for meta learning. 
 
         Args:
@@ -78,7 +78,6 @@ class MetaDataset(torch.utils.data.Dataset):
             n_shot (int): number of support examples per class
             n_query (int): number of query example
             audio_tfm (callable): transform to be applied to a nussl.AudioSignal
-            epi_tfm (callable): transform to be applied to an episode (a dict that contains audio and metadata)
             deterministic (bool): if True, the same episode will always be returned for a particular index. 
                 Else, a new randomly generated episode is always created. Setting to true requires writing and reading 
                 from disk, so it may be slower.
@@ -96,7 +95,6 @@ class MetaDataset(torch.utils.data.Dataset):
         self.n_query = n_query
 
         self.audio_tfm = audio_tfm
-        self.epi_tfm = epi_tfm
 
         cache_name = repr(self.audio_tfm)
         self.cache_root = mt.CACHE_DIR / name / cache_name
@@ -176,13 +174,18 @@ class MetaDataset(torch.utils.data.Dataset):
         return entry
 
     def _process_episode(self, episode):
-        """apply transforms to all entries in an episode"""
+        """
+        apply transforms to all entries in an episode
+        and concatenate audio arrays together
+        """
         episode['records'] = [self.cache_if_needed(
             itm) for itm in episode['records']]
 
-        # apply episode transform
-        if self.epi_tfm is not None:
-            episode = self.epi_tfm(episode)
+        episode['x'] = np.stack([e['audio'] for e in episode['records']])
+
+        # remove audio from records as we don't need it
+        for e in episode['records']:
+            del e['audio']
 
         return episode
 
@@ -332,7 +335,13 @@ def episode_collate(batch):
     if len(batch) > 1:
         raise ValueError(f"enforcing a batch size of 1")
 
-    return batch[0]
+    episode = batch[0]
+
+    for key, val in episode.items():
+        if isinstance(val, np.ndarray):
+            episode[key] = torch.tensor(val)
+
+    return episode
 
 
 def loader(dataset, partition, batch_size=64, num_workers=None):

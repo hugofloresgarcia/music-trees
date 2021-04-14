@@ -27,7 +27,7 @@ def odcat(od: OrderedDict, dim: int):
 class LayerTree(nn.Module):
 
     def __init__(self, root_d: int, tree: MusicTree, depth: int):
-        """ creates a stack of layers
+        """ creates a hierarchical stack of layers
 
         self.layers is a nn.ModuleList[nn.ModuleDict[str: nn.Linear]]
         self.classifiers is a nn.ModuleList[nn.Linear]

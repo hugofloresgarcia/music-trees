@@ -2,7 +2,9 @@
 
 Code todos:
 - [ ] fix audio augmentation bug in generate/core.py
-- [ ] finish writing TreeModel, MetaTree, ProtoTree, and add load_model() to MetaTask. 
+- [ ] finish writing TreeModel, MetaTree, ProtoTree, and add load_model() to MetaTask.
+- [ ] create a better katunog taxonomy, as well as cleanup mdb taxonomy to hornbostel standards
+- [ ]  
 
 Leveraging Hierarchical Structures for Open World, Few Shot Musical Instrument Recognition
 
@@ -84,6 +86,10 @@ see `python train.py -h` for the full list of args provided by the pytorch light
 ```bash 
 export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py --name <NAME> --dataset mdb --num_workers 20  --learning_rate 0.03  
 ```
+
+##### training with a batch size greater than 1
+
+The code is structured so that the model only receives one episode (which can be thought of as a batch in itself), but if you want to batch episodes together for gradient purposes, use the `--accumulate_grad_batches` flag provided by pytorch lightning. 
 
 ### Evaluate
 
