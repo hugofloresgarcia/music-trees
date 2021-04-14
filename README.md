@@ -51,7 +51,7 @@ python -m music_trees.generate \
 
 Partitions are written to `music_trees/assets/<DATASET_NAME>/partition.json`. 
 
-Create a hierarchical train-val split with depth 1 for medleydb:
+Create a hierarchical train-val split with depth 1 for medleydb using the `joint-taxonomy` file:
 
 ```bash
 python music_trees/partition.py \
