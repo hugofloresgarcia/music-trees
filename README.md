@@ -1,11 +1,5 @@
 # Music Trees
 
-Code todos:
-- [ ] fix audio augmentation bug in generate/core.py
-- [ ] finish writing TreeModel, MetaTree, ProtoTree, and add load_model() to MetaTask.
-- [ ] create a better katunog taxonomy, as well as cleanup mdb taxonomy to hornbostel standards
-- [ ]  
-
 Leveraging Hierarchical Structures for Open World, Few Shot Musical Instrument Recognition
 
 requirements from github repos: 
