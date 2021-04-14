@@ -109,3 +109,6 @@ Tensorboard. This can be done with `ssh -L 6006:localhost:6006
 TODO: add docs for visualizing with emb-viz
 
 *or through visual studio code if you're cool*
+<!--stackedit_data:
+eyJoaXN0b3J5IjpbLTE5OTgwMTg4NjddfQ==
+-->
