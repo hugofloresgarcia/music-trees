@@ -93,6 +93,8 @@ export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py \
                                             --learning_rate 0.03  
 ```
 
+a new experiment will be created under `runs/<NAME>/<VERSION>`. checkpoints, embedding spaces, and other goodies will be stored there. 
+
 ##### training with a batch size greater than 1
 
 The code is structured so that the model only receives one episode (which can be thought of as a batch in itself), but if you want to batch episodes together for gradient purposes, use the `--accumulate_grad_batches` flag provided by pytorch lightning. 
@@ -113,7 +115,7 @@ export CUDA_VISIBLE_DEVICES='0' && python music_trees/eval.py --name <NAME> --ve
 
 ### Monitor
 
-Run `tensorboard --logdir runs`. If you are running training
+Run `tensorboard --logdir runs/`. If you are running training
 remotely, you must create a SSH connection with port forwarding to view
 Tensorboard. This can be done with `ssh -L 6006:localhost:6006
 <user>@<server-ip-address>`. Then, open `localhost:6006` in your browser. 
@@ -121,6 +123,3 @@ Tensorboard. This can be done with `ssh -L 6006:localhost:6006
 TODO: add docs for visualizing with emb-viz
 
 *or through visual studio code if you're cool*
-<!--stackedit_data:
-eyJoaXN0b3J5IjpbLTE5OTgwMTg4NjddfQ==
--->
