@@ -99,6 +99,7 @@ export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py \
                                             --model_name hprotonet \
                                             --height 0 \
                                             --d_root 128 \ 
+                                            --loss_decay -0.5 \
                                             --name <NAME> \
                                             --dataset mdb \
                                             --num_workers 20  \
