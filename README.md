@@ -75,7 +75,7 @@ For deterministic purposes (validation and evaluation), set `deterministic=True`
 
 Training runs are stored under `/runs/<NAME>/<VERSION>`. You shouldn't have to specify a version when running the script, as the version number is inferred automatically. If you are resuming from a checkpoint, then do specify the version. 
 
-see `python train.py -h` for the full list of args provided by the pytorch lightning trainer. 
+see `python music_trees/train.py -h` for the full list of args provided by the pytorch lightning trainer. 
 
 **note**: because we want swap models without modifying the overall training logic, 
 the actual model architecture is wrapped in `models.task.MetaTask` object, which takes care of defining optimizers, loading the actual model, and logging. One of the args required by `MetaTask` is `model_name`, which is the name of the actual model to load. 

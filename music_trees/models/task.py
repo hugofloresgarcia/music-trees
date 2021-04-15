@@ -3,9 +3,47 @@ from music_trees.models.protonet import HierarchicalProtoNet
 from music_trees.utils.train import batch_detach_cpu
 
 from argparse import Namespace
+import itertools
 
 import torch
 import pytorch_lightning as pl
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+def plot_confusion_matrix(cm, class_names):
+    """
+    Returns a matplotlib figure containing the plotted confusion matrix.
+
+    Args:
+       cm (array, shape = [n, n]): a confusion matrix of integer classes
+       class_names (array, shape = [n]): String names of the integer classes
+    """
+    if len(class_names) > 20:
+        figure = plt.figure(figsize=(32, 32))
+    else:
+        figure = plt.figure(figsize=(12, 12))
+    plt.imshow(cm, cmap='viridis')
+    plt.title("Confusion matrix")
+    plt.colorbar()
+    tick_marks = np.arange(len(class_names))
+    plt.xticks(tick_marks, class_names, rotation=65)
+    plt.yticks(tick_marks, class_names)
+
+    # Normalize the confusion matrix.
+    # cm = np.around(cm.astype('float') / cm.sum(axis=1)[:, np.newaxis], decimals=2)
+
+    # Use white text if squares are dark; otherwise black.
+    threshold = cm.max() / 2.
+
+    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+        color = "black" if cm[i, j] > threshold else "white"
+        plt.text(j, i, cm[i, j], horizontalalignment="center", color=color)
+
+    plt.tight_layout()
+    plt.ylabel('True label')
+    plt.xlabel('Predicted label')
+    return figure
 
 
 class MetaTask(pl.LightningModule):
@@ -136,10 +174,14 @@ class MetaTask(pl.LightningModule):
         # grab the list of all tasks
         tasks = output['tasks']
         for task in tasks:
+            task['target'] = task['target'].detach().cpu()
+            task['pred'] = task['pred'].detach().cpu()
+
             self.log_classification_task(task, stage)
 
             # only do the dim reduction every so often
             if val_check:
+                self.log_confusion_matrix(task, stage)
                 self.text_log_task(task, stage)
 
         if val_check:
@@ -156,6 +198,15 @@ class MetaTask(pl.LightningModule):
                  accuracy(task['pred'], task['target']))
         self.log(f'f1/{task["tag"]}/{stage}', f1(task['pred'], task['target'],
                  num_classes=num_classes, average='weighted'))
+
+    def log_confusion_matrix(self, task: dict, stage: str):
+        from sklearn.metrics import confusion_matrix
+        conf_matrix = confusion_matrix(
+            task['target'], task['pred'])
+        fig = plot_confusion_matrix(conf_matrix, task['classlist'])
+
+        self.logger.experiment.add_figure(
+            f'{task["tag"]}/{stage}', fig, self.global_step)
 
     def text_log_task(self, task: dict, stage: str):
         """ log a task via a markdownish table"""
