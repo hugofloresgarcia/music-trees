@@ -58,16 +58,16 @@ def evaluate(name: str, version: int):
         results['n_class'] = N_CLASS
         all_results.append(results)
 
-    all_results = pd.concat(all_results)
-    all_results.to_csv(output_dir / 'all_results.csv')
+        all_results_df = pd.concat(all_results)
+        all_results_df.to_csv(output_dir / 'all_results.csv')
 
-    results_path = mt.RESULTS_DIR / f'{name}-v{version}.csv'
-    results_path.parent.mkdir(exist_ok=True)
+        results_path = mt.RESULTS_DIR / f'{name}-v{version}.csv'
+        results_path.parent.mkdir(exist_ok=True)
 
-    all_results.to_csv(results_path)
-    for key, val in vars(ckpt['hyper_parameters']['hparams']).items():
-        all_results[key] = val
-    print(all_results)
+        for key, val in vars(ckpt['hyper_parameters']['args']).items():
+            all_results_df[key] = val
+        print(all_results_df)
+        all_results_df.to_csv(results_path)
 
 
 def get_ckpt_path(exp_dir):
