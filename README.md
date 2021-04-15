@@ -71,7 +71,7 @@ python music_trees/partition.py \
                 --name mdb 
                 --partitions train val
                 --sizes 0.7 0.3
-                --depth 1
+                --depth 2
 ```
 
 
