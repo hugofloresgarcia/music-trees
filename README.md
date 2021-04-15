@@ -47,6 +47,18 @@ python -m music_trees.generate \
                 --sample_rate 16000 \
 ```
 
+*hugo*: added an mdb-augmented dataset:
+
+```bash
+python -m music_trees.generate \
+                --dataset medleydb \
+                --name mdb-augmented \
+                --example_length 1.0 \
+                --augment true \
+                --hop_length 0.5 \
+                --sample_rate 16000
+```
+
 ### Partition data
 
 Partitions are written to `music_trees/assets/<DATASET_NAME>/partition.json`. 

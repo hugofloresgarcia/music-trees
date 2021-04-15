@@ -5,7 +5,6 @@ with open('README.md') as file:
     long_description = file.read()
 
 
-# TODO - replace with details of your project
 setup(
     name='music_trees',
     description='',

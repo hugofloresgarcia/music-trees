@@ -47,7 +47,6 @@ def train(args):
     exp_dir = get_exp_dir(args.name, logger.experiment.version)
     task.exp_dir = exp_dir
 
-    # TODO: need to refactor EmbeddingSpaceLogger to not have to create multiple instances
     emb_loggers = {part: EmbeddingSpaceLogger(exp_dir / f'{part}-embeddings', n_components=2,
                                               method='tsne') for part in ('train', 'val', 'test')}
     task.emb_loggers = emb_loggers

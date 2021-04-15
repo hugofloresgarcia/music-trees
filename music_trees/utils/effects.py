@@ -1,7 +1,8 @@
 """ audio effects
-TODO: DON"T USE NP.RANDOM
 """
 import numpy as np
+import torch
+import random
 import sox
 import librosa
 
@@ -17,8 +18,7 @@ def _check_audio_types(audio):
 
 def get_full_effect_chain():
     effect_chain = ['compand', 'overdrive', 'eq', 'pitch', 'speed',
-                    'phaser', 'flanger', 'reverb', 'chorus', 'speed',
-                    'lowpass']
+                    'phaser', 'flanger', 'reverb', 'chorus', 'speed']
     return effect_chain
 
 
@@ -48,9 +48,9 @@ def augment_from_array_to_array(audio, sr, effect_chain=None):
     tfm_audio = tfm.build_array(input_array=audio, sample_rate_in=sr)
     audio = np.squeeze(audio, axis=-1)
 
-    tfm_audio = utils.audio.zero_pad(tfm_audio, audio.shape[0])
-    tfm_audio = tfm_audio[0:audio.shape[0]]
     tfm_audio = au.librosa_output_wrap(audio)
+    tfm_audio = utils.audio.zero_pad(tfm_audio, audio.shape[-1])
+    tfm_audio = tfm_audio[:, 0:audio.shape[-1]]
 
     return tfm_audio, effect_params
 
@@ -62,6 +62,7 @@ def augment_from_audio_signal(signal, effect_chain=None):
     """
     signal.audio_data, effect_params = augment_from_array_to_array(signal.audio_data,
                                                                    signal.sample_rate, effect_chain)
+    signal._effect_params = effect_params
     return signal
 
 
@@ -81,18 +82,8 @@ def get_randn(mu, std, min=None, max=None):
     """ get a random float, sampled from a normal 
     distribution with mu and std, clipped between min and max
     """
-    randn = mu + std * np.random.randn(1)
+    randn = mu + std * torch.randn(1).numpy()
     return float(randn.clip(min, max))
-
-
-def choose(collection_like):
-    """ given a collection of items, draw one
-    (sampled from a uniform distribution)
-    """
-    min_i = 0
-    max_i = len(collection_like)
-    idx = int(np.floor(np.random.uniform(min_i, max_i)))
-    return collection_like[idx]
 
 
 def flip_coin(n_times=1):
@@ -100,11 +91,11 @@ def flip_coin(n_times=1):
     """
     result = True
     for _ in range(n_times):
-        result = result and choose([True, False])
+        result = result and random.choice([True, False])
     return result
 
 
-def add_effect_with_random_params(tfm, effect_name):
+def add_effect_with_random_params(tfm, effect_name, sample_rate=16000):
     """ add an effect with random params (that make sense somewhat)
     to the transformer tfm
     returns:
@@ -118,8 +109,8 @@ def add_effect_with_random_params(tfm, effect_name):
                       width=get_randn(mu=71, std=5, min=0, max=100),
                       speed=get_randn(mu=0.5, std=0.2, min=0.1, max=10),
                       phase=get_randn(mu=25, std=7, min=0, max=100),
-                      shape=choose(['sine', 'triangle']),
-                      interp=choose(['linear', 'quadratic']))
+                      shape=random.choice(['sine', 'triangle']),
+                      interp=random.choice(['linear', 'quadratic']))
         tfm.flanger(**params)
 
     elif 'phaser' == effect_name:
@@ -127,7 +118,7 @@ def add_effect_with_random_params(tfm, effect_name):
             delay=get_randn(mu=3, std=0.1, min=0, max=5),
             decay=get_randn(mu=0.4, std=0.05, min=0.1, max=0.5),
             speed=get_randn(mu=0.5, std=0.1, min=0.1, max=2),
-            modulation_shape=choose(['sinusoidal', 'triangular']))
+            modulation_shape=random.choice(['sinusoidal', 'triangular']))
         tfm.phaser(**params)
 
     elif 'overdrive' == effect_name:
@@ -143,9 +134,9 @@ def add_effect_with_random_params(tfm, effect_name):
     elif 'eq' == effect_name:
         params = {}
         # apply up to 7 filters
-        for filter_num in range(choose([1, 2, 3, 4, 5, 6, 7])):
+        for filter_num in range(random.choice([1, 2, 3, 4, 5, 6, 7])):
             # random log-spaced frequencies between 40 and 20k
-            octave = choose([2 ** i for i in range(5)])
+            octave = random.choice([2 ** i for i in range(5)])
             sub_params = dict(
                 frequency=get_randn(mu=60, std=10, min=40, max=80) * octave,
                 gain_db=get_randn(mu=0, std=6, min=-24, max=24),
@@ -167,7 +158,8 @@ def add_effect_with_random_params(tfm, effect_name):
         tfm.reverb(**params)
 
     # elif 'lowpass' == effect_name:
-    #     params = dict(frequency=get_randn(8000, 2000, min=500, max=12e3))
+    #     params = dict(frequency=get_randn(
+    #         8000, 2000, min=500, max=sample_rate//2))
     #     tfm.lowpass(**params)
 
     elif 'chorus' == effect_name:

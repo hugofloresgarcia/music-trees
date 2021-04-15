@@ -1,16 +1,16 @@
-""" generate/medleydb.py - TODO: write me """
+""" generate/medleydb.py"""
+import medleydb as mdb
 import logging
 import music_trees as mt
-logging.basicConfig(level=logging.ERROR) # override the config from root
+logging.basicConfig(level=logging.ERROR)  # override the config from root
 
-import medleydb as mdb
 
 # these classes do not fit nicely in our hierarchy, either
 # because they're too general (horn section) or not an instrument (sampler)
 UNWANTED_CLASSES = ('Main System', 'fx/processed sound', 'sampler', 'horn sec`tion',
                     'string section', 'brass section', 'castanet', 'electronic organ', 'scratches', 'theremin', )
 
-# because instrument sections are the same as the instrument, 
+# because instrument sections are the same as the instrument,
 # we want them to be considered as one instrument
 REMAP_CLASSES = {'violin section': 'violin',
                  'viola section': 'viola',
@@ -21,8 +21,9 @@ REMAP_CLASSES = {'violin section': 'violin',
                  'clarinet section': 'clarinet',
                  'cello section': 'cello'}
 
+
 def load_unique_instrument_list():
-    # the first thing to do is to partition the MDB track IDs 
+    # the first thing to do is to partition the MDB track IDs
     # and stem IDs into only the ones we will use.
     mtracks = mdb.load_all_multitracks(['V1', 'V2'])
 
@@ -41,6 +42,7 @@ def load_unique_instrument_list():
 
     return instruments
 
+
 def get_files_for_instrument(instrument: str):
     files = list(mdb.get_files_for_instrument(instrument))
     # find out if we have any other files from the remapped section
@@ -48,6 +50,7 @@ def get_files_for_instrument(instrument: str):
         if instrument == val:
             files.extend(list(mdb.get_files_for_instrument(key)))
     return files
+
 
 def load_all_filepaths():
     # keep track of each instrument and its list of files
@@ -65,7 +68,8 @@ def load_all_filepaths():
     for instrument, paths in FILES.items():
         for path in paths:
             records.append({'path': path, 'label': instrument})
-    
+
     return records
+
 
 loader_fn = load_all_filepaths

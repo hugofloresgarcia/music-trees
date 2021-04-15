@@ -31,14 +31,10 @@ def _generate_records_from_file(item: dict):
     windows = mt.utils.audio.window(signal, window_len, hop_len)
 
     # augment if necessary
-    # TODO: need to figure out how to
-    # add effect_params to these entries.
-    # TODO: shouldn't use np.random inside transform
     if item['augment']:
-        raise NotImplementedError
-        transform = mt.preprocess.RandomEffects()
         for i in range(NUM_AUGMENT_FOLDS):
-            clips = [transform(sig) for sig in deepcopy(windows)]
+            clips = [mt.utils.effects.augment_from_audio_signal(
+                sig) for sig in deepcopy(windows)]
             windows.extend(clips)
 
     # create and save a new record for each window
@@ -47,6 +43,11 @@ def _generate_records_from_file(item: dict):
         del extra['path']
         entry = mt.utils.data.make_entry(sig, uuid=str(uuid.uuid4()), format='wav',
                                          **extra)
+
+        if hasattr(signal, '_effect_params'):
+            entry['effect_params'] = signal._effect_params
+        else:
+            entry['effect_params'] = {}
 
         output_path = mt.utils.data.get_path(entry)
         output_path.parent.mkdir(exist_ok=True)
