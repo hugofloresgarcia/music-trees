@@ -116,9 +116,10 @@ def metrics(outputs: dict, tree: MusicTree = None):
         metrics[tag]['f1_macro'] = f1_score(t['target'], t['pred'],
                                             average='macro',  labels=classlist)
         if tree is not None:
-            if tag == 'proto':
-                metrics[tag]['hlca'] = np.mean(
-                    [tree.hlca(p, tgt) for p, tgt in zip(t['pred'], t['target'])])
+            # only take into account mistakes
+            metrics[tag]['hlca-mistake'] = np.mean(
+                [tree.hlca(p, tgt) for p, tgt in zip(t['pred'], t['target'])
+                    if t['pred'] != t['target']])
 
     return metrics
 
