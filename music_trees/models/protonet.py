@@ -9,6 +9,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from str2bool import str2bool
+
 
 def get_all_query_records(episode: dict):
     return [e for e in episode['records']
@@ -56,6 +58,7 @@ class HierarchicalProtoNet(nn.Module):
         self.tree = mt.tree.MusicTree.from_taxonomy(taxonomy)
 
         self.loss_decay = args.loss_decay
+        self.hierarchical_loss = args.hierarchical_loss
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -72,6 +75,8 @@ class HierarchicalProtoNet(nn.Module):
                                   if the decay is positive, the loss will get exponentially \
                                   smaller as the height of the tree increases. if the decay is negative, \
                                   the loss will get exponentially bigger as the height of the tree increases.")
+        parser.add_argument('--hierarchical_loss', type=str2bool, default=False,
+                            help="whether to use a hierarchical loss or not")
         return parser
 
     def _get_backbone_shape(self):
@@ -312,7 +317,10 @@ class HierarchicalProtoNet(nn.Module):
         metatasks = [leaf_task] + ancestor_tasks
         output['tasks'] = metatasks
 
-        output['loss'] = sum(t['loss']*t['loss_weight']
-                             for t in output['tasks'])
+        if self.hierarchical_loss:
+            output['loss'] = sum(t['loss']*t['loss_weight']
+                                 for t in output['tasks'])
+        else:
+            output['loss'] = leaf_task['loss']
 
         return output
