@@ -55,7 +55,7 @@ class HierarchicalProtoNet(nn.Module):
             mt.ASSETS_DIR/'taxonomies'/f'{args.taxonomy_name}.yaml', 'yaml')
         self.tree = mt.tree.MusicTree.from_taxonomy(taxonomy)
 
-        self.loss_decay = 2
+        self.loss_decay = args.loss_decay
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -67,6 +67,11 @@ class HierarchicalProtoNet(nn.Module):
         parser.add_argument('--taxonomy_name', type=str, default='joint-taxonomy',
                             help="name of taxonomy file. must be in \
                                     music_trees/assets/taxonomies")
+        parser.add_argument('--loss_decay', type=float, default=-0.5,
+                            help="loss decay of the hierarchial loss w.r.t to height.\
+                                  if the decay is positive, the loss will get exponentially \
+                                  smaller as the height of the tree increases. if the decay is negative, \
+                                  the loss will get exponentially bigger as the height of the tree increases.")
         return parser
 
     def _get_backbone_shape(self):
@@ -270,7 +275,7 @@ class HierarchicalProtoNet(nn.Module):
             # remember to remove batch dim from output distances
             ancestor_dists = ancestor_dists.squeeze(0)
 
-            loss = F.cross_entropy(ancestor_dists, ancestor_targets.view(-1))
+            loss = F.cross_entropy(-ancestor_dists, ancestor_targets.view(-1))
             ancestor_task = {
                 'is_meta': True,
                 'classlist': ancestor_classlist,
@@ -305,9 +310,9 @@ class HierarchicalProtoNet(nn.Module):
 
         # insert metatasks in ascending order
         metatasks = [leaf_task] + ancestor_tasks
+        output['tasks'] = metatasks
 
         output['loss'] = sum(t['loss']*t['loss_weight']
                              for t in output['tasks'])
 
-        output['tasks'] = metatasks
         return output
