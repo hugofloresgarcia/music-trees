@@ -116,7 +116,9 @@ def hierarchical_partition(taxonomy: str, name: str, partitions: List[str],
 
     # we dont want the 'other' class
     tree.remove_by_uids(['other'])
-
+    
+    breakpoint()
+    
     # load the dataset's records from /data/ and get the classlist
     records = mt.utils.data.glob_all_metadata_entries(mt.DATA_DIR / name)
     classlist = mt.utils.data.get_classlist(records)
