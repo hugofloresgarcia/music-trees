@@ -5,7 +5,7 @@ import numpy as np
 import sox
 import librosa
 
-from instrument_recognition import utils
+import music_trees.utils as utils
 import audio_utils as au
 
 
