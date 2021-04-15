@@ -1,0 +1,41 @@
+strings:
+  bowed:
+    - erhu
+    - violin
+    - viola
+    - cello
+    - double bass
+    - violin section
+    - viola section
+    - cello section
+    - string section
+    - dilruba
+winds: 
+  brass:
+    - trumpet
+    - cornet
+    - trombone
+    - french horn
+    - euphonium
+    - tuba
+    - brass section
+    - french horn section
+    - trombone section
+    - horn section
+    - trumpet section
+percussion:
+  idiophones:
+    - drum machine
+    - timpani
+    - toms
+    - snare drum
+    - kick drum
+    - bass drum
+    - bongo
+    - conga
+    - tambourine
+    - darbuka
+    - doumbek
+    - tabla
+    - auxiliary percussion
+    - drum set
