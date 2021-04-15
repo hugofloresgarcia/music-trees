@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 DATASET = 'katunog'
 NUM_WORKERS = 0
-N_EPISODES = 1000
+N_EPISODES = 750
 N_CLASS = 12
 N_QUERY = 16
 N_SHOT = (1, 2, 4, 8, 16, 32)
