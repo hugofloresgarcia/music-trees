@@ -45,7 +45,9 @@ def _flat_split(leaves: List[mt.tree.MusicNode], partitions, sizes):
         leaves, key=lambda node: node.data['n_examples'], reverse=True)
 
     partition = {}
-    for key, split in zip(partitions, percentage_split(leaves, sizes)):
+    splits = percentage_split(leaves, sizes)
+    breakpoint()
+    for key, split in zip(partitions, splits):
         partition[key] = {l.uid: l.data['records'] for l in split}
 
     return partition
@@ -72,7 +74,10 @@ def _hierarchical_split(tree: MusicTree, depth: int, partitions, sizes):
     nodes = tree.all_nodes_at_depth(depth)
     partition = OrderedDict((p, {}) for p in partitions)
 
+    breakpoint()
     for node in nodes:
+        assert not tree.is_leaf(
+            node), "the nodes passed here should be parent nodes"
         leaves = [n for n in tree.leaves(node.uid)]
         local_partition = _flat_split(leaves, partitions, sizes)
         partition = _update_partition(partition, local_partition)
@@ -109,6 +114,7 @@ def hierarchical_partition(taxonomy: str, name: str, partitions: List[str],
     tree = MusicTree.from_taxonomy(taxonomy)
 
     # shorten tree to desired depth
+    assert depth > 0
     tree = tree.shorten(depth)
 
     # even out the tree's depth on all branches
@@ -116,9 +122,7 @@ def hierarchical_partition(taxonomy: str, name: str, partitions: List[str],
 
     # we dont want the 'other' class
     tree.remove_by_uids(['other'])
-    
-    breakpoint()
-    
+
     # load the dataset's records from /data/ and get the classlist
     records = mt.utils.data.glob_all_metadata_entries(mt.DATA_DIR / name)
     classlist = mt.utils.data.get_classlist(records)
@@ -133,7 +137,7 @@ def hierarchical_partition(taxonomy: str, name: str, partitions: List[str],
     assert len(partitions) == len(sizes)
 
     # perform the hierarchical split!
-    partition = _hierarchical_split(tree, depth, partitions, sizes)
+    partition = _hierarchical_split(tree, depth-1, partitions, sizes)
 
     # display the trees
     display_partition_subtrees(tree, partition, records)
