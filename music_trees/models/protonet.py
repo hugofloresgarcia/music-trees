@@ -208,7 +208,9 @@ class HierarchicalProtoNet(nn.Module):
             ancestor_protos[ancestor] = ancestor_proto
 
         # convert the OrderedDict into a tensor for our loss function
-        ancestor_protos = torch.stack(list(ancestor_protos.values()))
+        # I should probably rearrange ancestor_protos here to match ancestor_classlist
+        ancestor_protos = [ancestor_protos[a] for a in ancestor_classlist]
+        ancestor_protos = torch.stack(ancestor_protos)
 
         return ancestor_protos
 
