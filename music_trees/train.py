@@ -67,7 +67,7 @@ def train(args):
     # early stop
     from pytorch_lightning.callbacks import EarlyStopping
     callbacks.append(EarlyStopping(
-        monitor='loss/val', mode='min', patience=20))
+        monitor='loss/val', mode='min', patience=200))
 
     # get the best path to the model if it exists
     if ckpt_callback.best_model_path == '':

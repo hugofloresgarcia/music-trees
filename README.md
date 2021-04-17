@@ -98,7 +98,7 @@ To view what models are available, see `MetaTask.load_model_parser`. Note that e
 export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py \
                                             --model_name hprotonet \
                                             --height 1 \
-                                            --d_root 128 \ 
+                                            --d_root 128 \
                                             --loss_decay -0.5 \
                                             --hierarchical_loss true \
                                             --name <NAME> \

@@ -17,6 +17,11 @@ def get_all_query_records(episode: dict):
             [episode['n_shot']*episode['n_class']:]]
 
 
+def get_all_support_records(episode: dict):
+    return [e for e in episode['records']
+            [:episode['n_shot']*episode['n_class']]]
+
+
 def get_target_tensor(query_records: List[dict], classlist: List[str]):
     return torch.tensor([classlist.index(e['label'])
                          for e in query_records])
@@ -24,6 +29,12 @@ def get_target_tensor(query_records: List[dict], classlist: List[str]):
 
 def loss_weight_fn(decay, height):
     return torch.exp(-torch.tensor(decay*height).float())
+
+
+def chunks(l, n):
+    """https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks"""
+    n = max(1, n)
+    return [l[i:i+n] for i in range(0, len(l), n)]
 
 
 class HierarchicalProtoNet(nn.Module):
@@ -58,7 +69,6 @@ class HierarchicalProtoNet(nn.Module):
         self.tree = mt.tree.MusicTree.from_taxonomy(taxonomy)
 
         self.loss_decay = args.loss_decay
-        self.hierarchical_loss = args.hierarchical_loss
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -67,7 +77,7 @@ class HierarchicalProtoNet(nn.Module):
                             help="root dimension")
         parser.add_argument('--height', type=int, default=0,
                             help="height of prototypical loss")
-        parser.add_argument('--taxonomy_name', type=str, default='joint-taxonomy',
+        parser.add_argument('--taxonomy_name', type=str, default='deep-mdb',
                             help="name of taxonomy file. must be in \
                                     music_trees/assets/taxonomies")
         parser.add_argument('--loss_decay', type=float, default=-0.5,
@@ -75,8 +85,6 @@ class HierarchicalProtoNet(nn.Module):
                                   if the decay is positive, the loss will get exponentially \
                                   smaller as the height of the tree increases. if the decay is negative, \
                                   the loss will get exponentially bigger as the height of the tree increases.")
-        parser.add_argument('--hierarchical_loss', type=str2bool, default=False,
-                            help="whether to use a hierarchical loss or not")
         return parser
 
     def _get_backbone_shape(self):
@@ -98,16 +106,21 @@ class HierarchicalProtoNet(nn.Module):
         return root_embedding
 
     def forward(self, episode: dict):
-        """ 
+        """
         forward pass through prototypical net
-        will output a single metatask, wrapped in a list. 
+        will output a single metatask, wrapped in a list.
         """
         # after collating, x should be
         # shape (batch, n_c*n_k + n_q, -1)
         x = episode['x']
 
         # forward pass through backbone
-        x = self.root_forward(x)
+        MAX_FP_SIZE = 512
+        # maybe this mitigates OOM during evaluation?
+        # update: it does!! we're keeping it
+        x = torch.cat([self.root_forward(subx)
+                       for subx in chunks(x, MAX_FP_SIZE)], dim=0)
+        del episode['x']
 
         n_k = episode['n_shot']
         n_c = episode['n_class']
@@ -255,7 +268,8 @@ class HierarchicalProtoNet(nn.Module):
         classlist = metatask['classlist']
 
         ancestor_metatasks = []
-        for height in range(1, self.height+1):
+        total_height = self.tree.depth()
+        for height in range(1, total_height):
             # get the unique list of ancestors,
             # as well as dict w format class: ancestor
             ancestor_classlist, c2a = self.get_ancestor_classlist(
@@ -281,6 +295,8 @@ class HierarchicalProtoNet(nn.Module):
             ancestor_dists = ancestor_dists.squeeze(0)
 
             loss = F.cross_entropy(-ancestor_dists, ancestor_targets.view(-1))
+            loss_weight = loss_weight_fn(self.loss_decay, height).type_as(
+                loss) if height <= self.height else 0
             ancestor_task = {
                 'is_meta': True,
                 'classlist': ancestor_classlist,
@@ -291,9 +307,9 @@ class HierarchicalProtoNet(nn.Module):
                 'query_embedding': query,
                 'support_embedding': metatask['support_embedding'],
                 'target': ancestor_targets,
-                'tag': 'ancestor-proto',
+                'tag': f'prototree-h{height}',
                 'loss': loss,
-                'loss_weight': loss_weight_fn(self.loss_decay, height).type_as(loss)
+                'loss_weight': loss_weight
             }
 
             # to keep the coarse-to-fine scheme,
@@ -317,10 +333,10 @@ class HierarchicalProtoNet(nn.Module):
         metatasks = [leaf_task] + ancestor_tasks
         output['tasks'] = metatasks
 
-        if self.hierarchical_loss:
-            output['loss'] = sum(t['loss']*t['loss_weight']
-                                 for t in output['tasks'])
-        else:
-            output['loss'] = leaf_task['loss']
+        # if self.hierarchical_loss:
+        output['loss'] = sum(t['loss']*t['loss_weight']
+                             for t in output['tasks'])
+        # else:
+        #     output['loss'] = leaf_task['loss']
 
         return output

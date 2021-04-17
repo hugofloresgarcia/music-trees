@@ -7,13 +7,20 @@ import torch
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from sklearn.metrics import f1_score
 
-DATASET = 'katunog'
+"""
+before forward pass: 734
+after forward pass:  8883
+after dists: 8885
+"""
+
+DATASET = 'mdb'
 NUM_WORKERS = 0
-N_EPISODES = 750
+N_EPISODES = 100
 N_CLASS = 12
-N_QUERY = 16
-N_SHOT = (1, 2, 4, 8, 16, 32)
+N_QUERY = 3 * 60  # (2 minutes of audio per class)
+N_SHOT = tuple(reversed((1, 2, 4, 8, 16, 32)))
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
@@ -47,27 +54,28 @@ def evaluate(name: str, version: int):
         dm.setup('test')
 
         outputs = []
-        for index, batch in tqdm(enumerate(dm.test_dataloader())):
-            batch = batch2cuda(batch)
-            output = model.eval_step(batch, index)
+        for index, episode in tqdm(enumerate(dm.test_dataloader())):
+            episode = batch2cuda(episode)
+            output = model.eval_step(episode, index)
             outputs.append(output)
 
-        results = pd.DataFrame(metrics(outputs, tree))
+        results = pd.DataFrame(episode_metrics(outputs, tree))
         results['model'] = f'{name}_v{version}'
         results['n_shot'] = n_shot
         results['n_class'] = N_CLASS
         all_results.append(results)
 
         all_results_df = pd.concat(all_results)
-        all_results_df.to_csv(output_dir / 'all_results.csv')
 
-        results_path = mt.RESULTS_DIR / f'{name}-v{version}.csv'
-        results_path.parent.mkdir(exist_ok=True)
+        results_path = mt.RESULTS_DIR / DATASET / f'{name}-v{version}.csv'
+        results_path.parent.mkdir(exist_ok=True, parents=True)
 
         for key, val in vars(ckpt['hyper_parameters']['args']).items():
+            if key in ('model', 'n_shot', 'n_class'):
+                continue
             all_results_df[key] = val
-        print(all_results_df)
         all_results_df.to_csv(results_path)
+        print(all_results_df)
 
 
 def get_ckpt_path(exp_dir):
@@ -93,8 +101,52 @@ def idx2label(labels: torch.Tensor,  classlist: list):
     return [classlist[l] for l in labels]
 
 
-def metrics(outputs: dict, tree: MusicTree = None):
-    from sklearn.metrics import f1_score
+def episode_metrics(outputs: dict, tree: MusicTree = None):
+    """ 
+    compute per-episode metrics, and return first and 
+    second order statistics for the results
+    """
+
+    #  gather a concatenated list of all preds and targets
+    task_tags = [t['tag'] for t in outputs[0]['tasks']]
+    tasks = {t: [] for t in task_tags}
+
+    results = []
+    for index, epi in enumerate(outputs):
+        for t in epi['tasks']:
+            classlist = t['classlist']
+            pred = idx2label(t['pred'], classlist)
+            target = idx2label(t['target'], classlist)
+
+            # f1 micro
+            results.append({
+                'episode_idx': index,
+                'metric': 'f1_micro',
+                'value': f1_score(target, pred, average='micro', labels=classlist),
+                'tag': t['tag'],
+            })
+
+            # f1 macro
+            results.append({
+                'episode_idx': index,
+                'metric': 'f1_macro',
+                'value': f1_score(target, pred, average='macro', labels=classlist),
+                'tag': t['tag'],
+            })
+
+            if 'tree' not in t['tag']:
+                results.append({
+                    'episode_idx': index,
+                    'metric': 'hlca-mistake',
+                    'value': np.mean([tree.hlca(p, tgt) for p, tgt in zip(pred, target)
+                                      if p != tgt]),
+                    'tag': t['tag'],
+                })
+
+    return pd.DataFrame(results)
+
+
+def flat_metrics(outputs: dict, tree: MusicTree = None):
 
     #  gather a concatenated list of all preds and targets
     task_tags = [t['tag'] for t in outputs[0]['tasks']]
@@ -116,10 +168,11 @@ def metrics(outputs: dict, tree: MusicTree = None):
         metrics[tag]['f1_macro'] = f1_score(t['target'], t['pred'],
                                             average='macro',  labels=classlist)
         if tree is not None:
-            # only take into account mistakes
-            metrics[tag]['hlca-mistake'] = np.mean(
-                [tree.hlca(p, tgt) for p, tgt in zip(t['pred'], t['target'])
-                    if t['pred'] != t['target']])
+            if 'tree' not in tag:
+                # only take into account mistakes
+                metrics[tag]['hlca-mistake'] = np.mean(
+                    [tree.hlca(p, tgt) for p, tgt in zip(t['pred'], t['target'])
+                        if p != tgt])
 
     return metrics
 

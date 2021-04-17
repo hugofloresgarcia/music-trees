@@ -7,26 +7,47 @@ def batch_detach_cpu(x):
     return batch_cpu(batch_detach(x))
 
 
-def batch_detach(dict_of_tensors):
-    """ detach a dict of tensors from autograd.
-    no op if tensors already detached
+def batch_detach(nested_collection):
+    """ move a dict of tensors to detach. 
+    no op if tensors already in detach
     """
-    for k, v in dict_of_tensors.items():
-        if isinstance(v, torch.Tensor):
-            dict_of_tensors[k] = v.detach()
-        if isinstance(v, dict):
-            dict_of_tensors[k] = batch_detach(v)
-    return dict_of_tensors
+    if isinstance(nested_collection, dict):
+        for k, v in nested_collection.items():
+            if isinstance(v, torch.Tensor):
+                nested_collection[k] = v.detach()
+            if isinstance(v, dict):
+                nested_collection[k] = batch_detach(v)
+            elif isinstance(v, list):
+                nested_collection[k] = batch_detach(v)
+    if isinstance(nested_collection, list):
+        for i, v in enumerate(nested_collection):
+            if isinstance(v, torch.Tensor):
+                nested_collection[i] = v.detach()
+            elif isinstance(v, dict):
+                nested_collection[i] = batch_detach(v)
+            elif isinstance(v, list):
+                nested_collection[i] = batch_detach(v)
+    return nested_collection
 
 
-def batch_cpu(dict_of_tensors):
+def batch_cpu(nested_collection):
     """ move a dict of tensors to cpu. 
     no op if tensors already in cpu
     """
-
-    for k, v in dict_of_tensors.items():
-        if isinstance(v, torch.Tensor):
-            dict_of_tensors[k] = v.cpu()
-        if isinstance(v, dict):
-            dict_of_tensors[k] = batch_cpu(v)
-    return dict_of_tensors
+    if isinstance(nested_collection, dict):
+        for k, v in nested_collection.items():
+            if isinstance(v, torch.Tensor):
+                nested_collection[k] = v.cpu()
+            if isinstance(v, dict):
+                nested_collection[k] = batch_cpu(v)
+            elif isinstance(v, list):
+                nested_collection[k] = batch_cpu(v)
+    if isinstance(nested_collection, list):
+        for i, v in enumerate(nested_collection):
+            if isinstance(v, torch.Tensor):
+                nested_collection[i] = v.cpu()
+            elif isinstance(v, dict):
+                nested_collection[i] = batch_cpu(v)
+            elif isinstance(v, list):
+                nested_collection[i] = batch_cpu(v)
+    return nested_collection

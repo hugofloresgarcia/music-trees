@@ -38,7 +38,8 @@ def plot_confusion_matrix(cm, class_names):
 
     for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
         color = "black" if cm[i, j] > threshold else "white"
-        plt.text(j, i, cm[i, j], horizontalalignment="center", color=color)
+        plt.text(j, i, "{:0.2f}".format(
+            cm[i, j]), horizontalalignment="center", color=color)
 
     plt.tight_layout()
     plt.ylabel('True label')
@@ -79,11 +80,11 @@ class MetaTask(pl.LightningModule):
 
         return model
 
-    @staticmethod
+    @ staticmethod
     def load_model_parser(parser, args):
-        """ 
-        depending on the model_name provided by the user, 
-        this will finish adding model specific Argparse args for the 
+        """
+        depending on the model_name provided by the user,
+        this will finish adding model specific Argparse args for the
         model that this task object holds
         """
         if args.model_name.lower() == 'hprotonet':
@@ -93,7 +94,7 @@ class MetaTask(pl.LightningModule):
 
         return parser
 
-    @staticmethod
+    @ staticmethod
     def add_model_specific_args(parent_parser):
         parser = parent_parser
         parser.add_argument('--model_name', type=str, required=True,
@@ -145,6 +146,7 @@ class MetaTask(pl.LightningModule):
         """ same as test_step, but doesn't call
         log_metrics(), as evaluation metrics are
         computed separately. """
+        # slower, but allows for bigger episodes
         with torch.no_grad():
             output = self._main_step(episode, index)
         return batch_detach_cpu(output)
@@ -152,14 +154,14 @@ class MetaTask(pl.LightningModule):
     def log_metrics(self, output: dict, stage='train'):
         """ given an output dict,
         logs metrics and embedding spaces to tensorboard and to
-        embviz, respectively. 
+        embviz, respectively.
 
         output should have:
             loss: tensor that contains the main loss
             index: episode index
-            tasks (List[dict]): a list of classification tasks, 
+            tasks (List[dict]): a list of classification tasks,
                 where each task is a dictionary with fields:
-                    is_meta: bool indicating whether this is a meta task or 
+                    is_meta: bool indicating whether this is a meta task or
                                 regular classification
                     classlist: list of classes in task
                     pred: predictions as a 1d array
@@ -198,11 +200,15 @@ class MetaTask(pl.LightningModule):
                  accuracy(task['pred'], task['target']))
         self.log(f'f1/{task["tag"]}/{stage}', f1(task['pred'], task['target'],
                  num_classes=num_classes, average='weighted'))
+        self.log(f'loss-weighted/{task["tag"]}/{stage}',
+                 task['loss'] * task['loss_weight'])
+        self.log(f'loss-unweighted/{task["tag"]}/{stage}',
+                 task['loss'])
 
     def log_confusion_matrix(self, task: dict, stage: str):
         from sklearn.metrics import confusion_matrix
         conf_matrix = confusion_matrix(
-            task['target'], task['pred'])
+            task['target'], task['pred'], normalize='true')
         fig = plot_confusion_matrix(conf_matrix, task['classlist'])
 
         self.logger.experiment.add_figure(

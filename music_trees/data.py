@@ -298,7 +298,8 @@ class MetaDataModule(pl.LightningDataModule):
                                                **self.kwargs)
 
         if stage == 'test':
-            self.test_dataset = MetaDataset(self.name, partition='test', deterministic=True,
+            partition = 'test' if 'test' in partition else 'val'
+            self.test_dataset = MetaDataset(self.name, partition=partition, deterministic=True,
                                             n_shot=self.n_shot, n_query=self.n_query, n_class=self.n_class,
                                             **self.kwargs)
 
