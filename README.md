@@ -94,13 +94,14 @@ the actual model architecture is wrapped in `models.task.MetaTask` object, which
 
 To view what models are available, see `MetaTask.load_model_parser`. Note that each model under `load_model_parser` has its own set of required hyperparameters. For example, the required args for `hprotonet` (`HierarchicalProtoNet`) are `d_root`, `height`, and `taxonomy_name`. Each model has its own `add_model_specific_args` function, where you can look at the required arguments, default values, and help strings. 
 
-```bash 
+
+```bash
+# trains a protonet with hierarchical loss with height 2 and a loss decay of 1
 export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py \
                                             --model_name hprotonet \
-                                            --height 1 \
+                                            --height 2 \
                                             --d_root 128 \
-                                            --loss_decay -0.5 \
-                                            --hierarchical_loss true \
+                                            --loss_decay 1 \
                                             --name <NAME> \
                                             --dataset mdb \
                                             --num_workers 20  \

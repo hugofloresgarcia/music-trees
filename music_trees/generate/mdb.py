@@ -6,7 +6,7 @@ logging.basicConfig(level=logging.ERROR)  # override the config from root
 
 
 # these classes do not fit nicely in our hierarchy, either
-# because they're too general (horn section) or not an instrument (sampler)
+# because they're too general (horn section) or not a physical instrument (sampler)
 UNWANTED_CLASSES = ('Main System', 'fx/processed sound', 'sampler', 'horn sec`tion',
                     'string section', 'brass section', 'castanet', 'electronic organ', 'scratches', 'theremin', )
 

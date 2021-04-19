@@ -9,17 +9,12 @@ import pandas as pd
 from tqdm import tqdm
 from sklearn.metrics import f1_score
 
-"""
-before forward pass: 734
-after forward pass:  8883
-after dists: 8885
-"""
 
 DATASET = 'mdb'
 NUM_WORKERS = 0
 N_EPISODES = 100
 N_CLASS = 12
-N_QUERY = 3 * 60  # (2 minutes of audio per class)
+N_QUERY = 3 * 60  # (3 minutes of audio per class)
 N_SHOT = tuple(reversed((1, 2, 4, 8, 16, 32)))
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 

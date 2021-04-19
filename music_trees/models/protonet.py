@@ -333,10 +333,7 @@ class HierarchicalProtoNet(nn.Module):
         metatasks = [leaf_task] + ancestor_tasks
         output['tasks'] = metatasks
 
-        # if self.hierarchical_loss:
         output['loss'] = sum(t['loss']*t['loss_weight']
                              for t in output['tasks'])
-        # else:
-        #     output['loss'] = leaf_task['loss']
 
         return output
