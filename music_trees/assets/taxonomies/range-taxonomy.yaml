@@ -1,0 +1,126 @@
+- erhu  # D4 - A7
+- violin # G3 - A7
+- viola # C3 - E6
+- cello # C2 - C6
+- double bass #C2-C5
+- violin section # G3 - A7
+- viola section # C2 - E6
+- cello section # C2 - C6
+- string section # C2 - A7
+- dilruba
+- acoustic guitar # E2 - D6
+- clean electric guitar # E2 - D6
+- electric bass # D1 - G3
+- lap steel guitar # C6 - E9
+- banjo # C3 ~ C6
+- guzheng # D2 - C6
+- harp # Cb1 - F#7 
+- harpsichord # F1 - F6
+- liuqin # G3 - G7
+- mandolin # G3 - C7
+- oud
+- slide guitar
+- ukulele
+- zhongruan
+- sitar
+- dulcimer
+- yangqin
+- piano
+- tack piano
+- dizi
+- flute # C4-D
+- flute section
+- piccolo # D5 - C8
+- bamboo flute
+- panpipes
+- recorder
+- alto saxophone
+- baritone saxophone
+- bass clarinet
+- clarinet
+- clarinet section
+- tenor saxophone
+- soprano saxophone
+- oboe
+- english horn
+- bassoon
+- bagpipe
+- harmonica
+- concertina
+- accordion
+- bandoneon
+- harmonium
+- pipe organ
+- melodica
+- trumpet
+- cornet
+- trombone
+- french horn
+- euphonium
+- tuba
+- brass section
+- french horn section
+- trombone section
+- horn section
+- trumpet section
+- male singer #E2 - E5 
+- female singer # F3 - C6
+- male speaker #E2 - E5 
+- female speaker # F3 - C6
+- male rapper #E2 - E5 
+- female rapper # F3 - C6
+- beatboxing # E2 - C6
+- vocalists # E2 - C6
+- choir # E2 - C6
+- crowd # E2 - C6
+- male screamer # E2 - E5
+- female screamer # F3 - C6
+- xylophone
+- vibraphone
+- marimba
+- glockenspiel
+- chimes
+- electric piano
+- triangle
+- sleigh bells
+- cowbell
+- cabasa
+- high hat
+- gong
+- guiro
+- gu
+- cymbal
+- castanet
+- claps
+- rattle
+- shaker
+- maracas
+- whistle
+- snaps
+- drum machine
+- timpani
+- toms
+- snare drum
+- kick drum
+- bass drum
+- bongo
+- conga
+- tambourine
+- darbuka
+- doumbek
+- tabla
+- auxiliary percussion
+- drum set
+# electric:
+#   amplified:
+#     - distorted electric guitar
+#   electronic:
+#     - electronic organ
+#     - synthesizer
+#     - theremin
+#     - fx/processed sound
+#     - scratches
+#     - sampler
+# other:
+#     - Main System
+#     - Unlabeled

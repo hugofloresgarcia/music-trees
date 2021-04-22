@@ -1,0 +1,151 @@
+Asia:
+  China :
+    - erhu 
+    - guzheng 
+    - liuqin 
+    - zhongruan 
+    - yangqin 
+    - chimes 
+    - cowbell 
+    - gong 
+    - gu 
+    - toms 
+  India :
+    - dilruba 
+    - sitar 
+    - harmonium 
+	  - tabla 
+  Middle East:
+    - oud
+  Southeast Asia:
+    - xylophone 
+  Asian Unspecified:
+    - cymbal 
+
+  
+Europe:
+  Italy:
+    - violin 
+    - viola 
+    - cello 
+    - double bass 
+    - violin section 
+    - viola section 
+    - cello section 
+    - string section 
+    - harpsichord 
+    - mandolin 
+    - tack piano 
+    - bassoon 
+    - melodica 
+    - electric piano
+    - piano 
+  France:
+    - dizi 
+    - oboe 
+    - cornet 
+  Germany:
+    - flute 
+    - flute section 
+    - piccolo 
+    - recorder 
+    - alto saxophone 
+    - bass clarinet 
+    - clarinet 
+    - tenor saxophone 
+    - soprano saxophone 
+    - harmonica 
+    - accordion 
+    - bandoneon 
+    - trombone 
+    - french horn 
+    - euphonium 
+    - tuba 
+    - brass section 
+    - french horn section 
+    - trombone section 
+    - glockenspiel 
+    - timpani 
+    - baritone saxophone 
+  Greece:
+    - panpipes 
+    - pipe organ 
+    - sleigh bells 
+  Poland Czech Republic:
+	 - english horn 
+  England:
+    - whistle 
+  Turkey:
+    - drum machine 
+    - bass drum 
+  Spain:
+  	 - castanet 
+
+North America:
+  United States :
+    - acoustic guitar 
+    - clean electric guitar 
+    - electric bass 
+    - banjo 
+    - slide guitar 
+    - dulcimer 
+    - male rapper 
+    - female rapper 
+    - beatboxing 
+    - vibraphone
+    - high hat 
+    Hawaii:
+      - lap steel guitar
+
+Africa:
+  Egypt :
+  	- trumpet section
+    - snare drum  
+    - harp 
+    - bagpipe 
+    - trumpet 
+    - triangle 
+    - rattle 
+    - darbuka 
+    - doumbek 
+
+South America:
+  Portrogual: 
+    - ukulele 
+  Latin America:
+	 - shaker 
+  Cuba:
+    - bongo 
+    - conga 
+  Puerto Rico:
+    - guiro 
+    - maracas 
+
+Oceania:
+  Australia:
+    - claps 
+
+Other:
+  Multiple:
+    - bamboo flute 
+    - clarinet section 
+    - horn section 
+    - marimba 
+    - tambourine 
+    - auxiliary percussion 
+    - drum set 
+    - concertina 
+    - cabasa 
+
+  N/A:
+    - male singer 
+    - female singer 
+    - male speaker 
+    - female speaker 
+    - vocalists 
+    - choir 
+    - crowd 
+    - male screamer 
+    - female screamer 
+    - snaps 
+    - kick drum 
