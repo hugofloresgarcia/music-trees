@@ -1,113 +1,151 @@
-- erhu # China
-- violin # Italy
-- viola # Italy
-- cello # Italy
-- double bass # Italy
-- violin section # Italy
-- viola section # Italy
-- cello section # Italy
-- string section # Italy
-- dilruba # India
-- acoustic guitar # United States
-- clean electric guitar # United States
-- electric bass # United States
-- lap steel guitar # Hawaii
-- banjo # United States
-- guzheng # China
-- harp # Egypt
-- harpsichord # Italy
-- liuqin # China
-- mandolin # Italy
-- oud # Middle East
-- slide guitar # United States
-- ukulele # Hawaii
-- zhongruan # China
-- sitar # India
-- dulcimer # United States
-- yangqin # China
-- piano # Italy 
-- tack piano # Italy
-- dizi # France
-- flute # Germany 
-- flute section # Germany 
-- piccolo # Germany
-- bamboo flute # Multiple
-- panpipes # Greece
-- recorder # Germany
-- alto saxophone # Germany
-- baritone saxophone # Geramny
-- bass clarinet # Germany
-- clarinet # Germany
-- clarinet section # Germany / France
-- tenor saxophone # Germany
-- soprano saxophone # Germany 
-- oboe # France
-- english horn # Poland Czech Republic
-- bassoon # Italy
-- bagpipe # Egypt
-- harmonica # Germany
-- concertina # England and Germany
-- accordion # Germany
-- bandoneon # Germany
-- harmonium # India
-- pipe organ # Greece
-- melodica # Italy
-- trumpet # Egypt
-- cornet # France
-- trombone # Germany
-- french horn # Germany
-- euphonium # Germany
-- tuba # Germany
-- brass section # Germany
-- french horn section # Germany
-- trombone section # Germany
-- horn section # Multiple
-- trumpet section # Egypt 
-- male singer # No Origin
-- female singer # N/A
-- male speaker # N/A
-- female speaker # N/A
-- male rapper # United States
-- female rapper # United States
-- beatboxing # United States
-- vocalists # N/A
-- choir # N/A
-- crowd # N/A
-- male screamer # N/A
-- female screamer # N/A
-- xylophone # Southeast Asia
-- vibraphone # United States
-- marimba # Southeast Asian / Africa
-- glockenspiel # Germany
-- chimes # China
-- electric piano # Italy
-- triangle # Egypt
-- sleigh bells # Greek
-- cowbell # China
-- cabasa # Africa 
-- high hat # United States
-- gong # China
-- guiro # Puerto Rico
-- gu # China
-- cymbal # Asian Unspecified
-- castanet #  Iberian Peninsula
-- claps # Australia
-- rattle # Egypt
-- shaker # Latin America
-- maracas # Puerto Rico
-- whistle # England
-- snaps # N/A
-- drum machine # Turkey
-- timpani # Germany
-- toms # China
-- snare drum # Dgypt
-- kick drum # N/A
-- bass drum # turkey 
-- bongo # Cuba
-- conga # Cuba
-- tambourine # Multiple
-- darbuka # Egypt
-- doumbek # Egypt
-- tabla # North India
-- auxiliary percussion # Multiple
-- drum set # Multiple
+Asia:
+  China :
+    - erhu 
+    - guzheng 
+    - liuqin 
+    - zhongruan 
+    - yangqin 
+    - chimes 
+    - cowbell 
+    - gong 
+    - gu 
+    - toms 
+  India :
+    - dilruba 
+    - sitar 
+    - harmonium 
+	  - tabla 
+  Middle East:
+    - oud
+  Southeast Asia:
+    - xylophone 
+  Asian Unspecified:
+    - cymbal 
+
+  
+Europe:
+  Italy:
+    - violin 
+    - viola 
+    - cello 
+    - double bass 
+    - violin section 
+    - viola section 
+    - cello section 
+    - string section 
+    - harpsichord 
+    - mandolin 
+    - tack piano 
+    - bassoon 
+    - melodica 
+    - electric piano
+    - piano 
+  France:
+    - dizi 
+    - oboe 
+    - cornet 
+  Germany:
+    - flute 
+    - flute section 
+    - piccolo 
+    - recorder 
+    - alto saxophone 
+    - bass clarinet 
+    - clarinet 
+    - tenor saxophone 
+    - soprano saxophone 
+    - harmonica 
+    - accordion 
+    - bandoneon 
+    - trombone 
+    - french horn 
+    - euphonium 
+    - tuba 
+    - brass section 
+    - french horn section 
+    - trombone section 
+    - glockenspiel 
+    - timpani 
+    - baritone saxophone 
+  Greece:
+    - panpipes 
+    - pipe organ 
+    - sleigh bells 
+  Poland Czech Republic:
+	 - english horn 
+  England:
+    - whistle 
+  Turkey:
+    - drum machine 
+    - bass drum 
+  Spain:
+  	 - castanet 
+
+North America:
+  United States :
+    - acoustic guitar 
+    - clean electric guitar 
+    - electric bass 
+    - banjo 
+    - slide guitar 
+    - dulcimer 
+    - male rapper 
+    - female rapper 
+    - beatboxing 
+    - vibraphone
+    - high hat 
+    Hawaii:
+      - lap steel guitar
+
+Africa:
+  Egypt :
+  	- trumpet section
+    - snare drum  
+    - harp 
+    - bagpipe 
+    - trumpet 
+    - triangle 
+    - rattle 
+    - darbuka 
+    - doumbek 
+
+South America:
+  Portrogual: 
+    - ukulele 
+  Latin America:
+	 - shaker 
+  Cuba:
+    - bongo 
+    - conga 
+  Puerto Rico:
+    - guiro 
+    - maracas 
+
+Oceania:
+  Australia:
+    - claps 
+
+Other:
+  Multiple:
+    - bamboo flute 
+    - clarinet section 
+    - horn section 
+    - marimba 
+    - tambourine 
+    - auxiliary percussion 
+    - drum set 
+    - concertina 
+    - cabasa 
+
+  N/A:
+    - male singer 
+    - female singer 
+    - male speaker 
+    - female speaker 
+    - vocalists 
+    - choir 
+    - crowd 
+    - male screamer 
+    - female screamer 
+    - snaps 
+    - kick drum 
