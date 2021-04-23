@@ -173,7 +173,7 @@ class MusicTree(Tree):
         parent to the leaf node in each path, in a loop until
         the uniform depth requirement is met
         """
-        max_depth = self.depth()
+        max_depth = self.depth()+1
 
         def expand_path_if_needed(path):
             if len(path) < max_depth:
@@ -181,8 +181,7 @@ class MusicTree(Tree):
                 parent = self[path[-2]]
                 leaf = self[path[-1]]
                 # create a copy of it
-                new_parent = MusicNode.new_unique(parent)
-
+                new_parent = MusicNode(parent.uid+'_', data=parent.data)
                 # get the children BEFORE we insert our new node
                 children = self.children(parent.uid)
                 # insert it into the tree as a child to parent
@@ -247,9 +246,10 @@ class MusicTree(Tree):
         if the height is 0, returns the node itself
         """
         all_paths = self.paths_to_leaves()
-        node_path = list(reversed([p for p in all_paths if p[-1] == nid]))
+        node_path = list([p for p in all_paths if p[-1] == nid])
         assert len(node_path) == 1
         node_path = node_path[0]
+        node_path = list(reversed(node_path))
 
         assert height < len(node_path)
 

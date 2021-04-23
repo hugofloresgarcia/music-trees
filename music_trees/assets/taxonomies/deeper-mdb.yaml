@@ -1,0 +1,141 @@
+chordophones: # 3
+  simple chordophones or zithers: # 31
+    - dulcimer
+    - yangqin
+    - piano
+    - tack piano
+  composite chordophones: # 32
+    lutes: #321
+      bowed: # 321.321
+        - erhu
+        - violin
+        - viola
+        - cello
+        - double bass
+        - violin section
+        - viola section
+        - cello section
+        - string section
+        - dilruba
+      plucked:
+        - acoustic guitar
+        - clean electric guitar
+        - electric bass
+        - lap steel guitar
+        - banjo
+        - guzheng
+        - harp
+        - harpsichord
+        - liuqin
+        - mandolin
+        - oud
+        - slide guitar
+        - ukulele
+        - zhongruan
+        - sitar
+
+aerophones:
+  free aerophones: # 41
+    interruptive free aerophones: # 412
+          - harmonica
+          - concertina
+          - accordion
+          - bandoneon
+          - harmonium
+          - pipe organ
+          - melodica
+  non-free aerophones: # 42
+    edge-blown aerophones: #421
+      - dizi
+      - flute
+      - flute section
+      - piccolo
+      - bamboo flute
+      - panpipes
+      - recorder
+    reed aerophones: # 422
+      double reeds: # 422.1
+        - oboe
+        - english horn
+        - bassoon
+        - bagpipe
+      singe reeds: # 422.212
+      - alto saxophone
+      - baritone saxophone
+      - bass clarinet
+      - tenor saxophone
+      - soprano saxophone
+      - clarinet
+      - clarinet section
+    trumpets: # 423
+        - trumpet
+        - cornet
+        - trombone
+        - french horn
+        - euphonium
+        - tuba
+        - brass section
+        - french horn section
+        - trombone section
+        - horn section
+        - trumpet section
+voices:
+  voice:
+    - male singer
+    - female singer
+    - male speaker
+    - female speaker
+    - male rapper
+    - female rapper
+    - beatboxing
+    - vocalists
+    - choir
+    - crowd
+    - male screamer
+    - female screamer
+
+idiophones:
+  struck idiophones:
+    directly struck idiophones:
+      - triangle
+      - cowbell
+      - high hat
+      - gong
+      - gu # not sure?
+      - cymbal
+      - castanet
+      - claps
+      - snaps
+      - xylophone
+      - vibraphone
+      - marimba
+      - glockenspiel
+      - chimes
+      - electric piano
+    indirectly struck idiophones:
+      - sleigh bells
+      - cabasa
+      - guiro
+      - rattle
+      - shaker
+      - maracas
+
+
+membranophones:
+  struck membranophones:
+    single instruments:
+      - timpani
+      - drum set
+      - toms
+      - snare drum
+      - kick drum
+      - bass drum
+      - drum machine
+    hand percussion:
+      - conga
+      - bongo
+      - tambourine
+      - auxiliary percussion
+      - darbuka
+      - doumbek
+      - tabla

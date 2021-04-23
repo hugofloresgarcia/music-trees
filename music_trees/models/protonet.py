@@ -67,6 +67,8 @@ class HierarchicalProtoNet(nn.Module):
         taxonomy = mt.utils.data.load_entry(
             mt.ASSETS_DIR/'taxonomies'/f'{args.taxonomy_name}.yaml', 'yaml')
         self.tree = mt.tree.MusicTree.from_taxonomy(taxonomy)
+        self.tree.even_depth()
+        self.tree.show()
 
         self.loss_decay = args.loss_decay
 
