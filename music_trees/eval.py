@@ -12,7 +12,7 @@ from sklearn.metrics import f1_score
 
 DATASET = 'mdb'
 NUM_WORKERS = 0
-N_EPISODES = 100
+N_EPISODES = 1
 N_CLASS = 12
 N_QUERY = 2 * 60  # (2 minutes of audio per class)
 N_SHOT = tuple(reversed((1, 2, 4, 8, 16, 32)))
@@ -138,38 +138,22 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
                     'tag': t['tag'],
                 })
 
+                results.append({
+                    'episode_idx': index,
+                    'metric': 'hP',
+                    'value': np.mean([tree.hierarchical_precision(p, tgt) for p, tgt in zip(pred, target)]),
+                    'tag': t['tag'],
+                })
+
+                results.append({
+                    'episode_idx': index,
+                    'metric': 'hR',
+                    'value': np.mean([tree.hierarchical_recall(p, tgt) for p, tgt in zip(pred, target)]),
+                    'tag': t['tag'],
+                })
+    breakpoint()
+
     return pd.DataFrame(results)
-
-
-def flat_metrics(outputs: dict, tree: MusicTree = None):
-
-    #  gather a concatenated list of all preds and targets
-    task_tags = [t['tag'] for t in outputs[0]['tasks']]
-    tasks = {t: {'pred': [], 'target': []} for t in task_tags}
-
-    for o in outputs:
-        for t in o['tasks']:
-            classlist = t['classlist']
-            pred = idx2label(t['pred'],  classlist)
-            target = idx2label(t['target'], classlist)
-            tasks[t['tag']]['pred'].extend(pred)
-            tasks[t['tag']]['target'].extend(target)
-
-    metrics = {tag: {} for tag in tasks.keys()}
-    for tag, t in tasks.items():
-        classlist = list(set(t['target']))
-        metrics[tag]['f1_micro'] = f1_score(t['target'], t['pred'],
-                                            average='micro', labels=classlist)
-        metrics[tag]['f1_macro'] = f1_score(t['target'], t['pred'],
-                                            average='macro',  labels=classlist)
-        if tree is not None:
-            if 'tree' not in tag:
-                # only take into account mistakes
-                metrics[tag]['hlca-mistake'] = np.mean(
-                    [tree.hlca(p, tgt) for p, tgt in zip(t['pred'], t['target'])
-                        if p != tgt])
-
-    return metrics
 
 
 if __name__ == "__main__":

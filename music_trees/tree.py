@@ -239,6 +239,26 @@ class MusicTree(Tree):
 
         raise ValueError
 
+    def hierarchical_precision(self, pred: str, truth: str):
+        """ hierachical precision as defined by Kiritchenko"""
+        pred_path = set(self.get_path_to_root(pred)[:-1])
+        truth_path = set(self.get_path_to_root(truth)[:-1])
+
+        assert len(pred_path) == len(truth_path)
+
+        intersection = len(pred_path & truth_path)
+        return intersection / len(pred_path)
+
+    def hierarchical_recall(self, pred: str, truth: str):
+        """ hierachical precision as defined by Kiritchenko"""
+        pred_path = set(self.get_path_to_root(pred)[:-1])
+        truth_path = set(self.get_path_to_root(truth)[:-1])
+
+        assert len(pred_path) == len(truth_path)
+
+        intersection = len(pred_path & truth_path)
+        return intersection / len(truth_path)
+
     def get_path_to_root(self, nid: str):
         path = [nid]
 

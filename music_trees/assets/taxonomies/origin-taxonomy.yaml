@@ -14,7 +14,7 @@ Asia:
     - dilruba 
     - sitar 
     - harmonium 
-	  - tabla 
+    - tabla 
   Middle East:
     - oud
   Southeast Asia:
@@ -72,14 +72,14 @@ Europe:
     - pipe organ 
     - sleigh bells 
   Poland Czech Republic:
-	 - english horn 
+    - english horn 
   England:
     - whistle 
   Turkey:
     - drum machine 
     - bass drum 
   Spain:
-  	 - castanet 
+    - castanet 
 
 North America:
   United States :
@@ -94,12 +94,12 @@ North America:
     - beatboxing 
     - vibraphone
     - high hat 
-    Hawaii:
-      - lap steel guitar
+  Hawaii:
+    - lap steel guitar
 
 Africa:
   Egypt :
-  	- trumpet section
+    - trumpet section
     - snare drum  
     - harp 
     - bagpipe 
@@ -113,7 +113,7 @@ South America:
   Portrogual: 
     - ukulele 
   Latin America:
-	 - shaker 
+    - shaker 
   Cuba:
     - bongo 
     - conga 
