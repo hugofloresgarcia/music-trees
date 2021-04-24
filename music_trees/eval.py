@@ -12,7 +12,7 @@ from sklearn.metrics import f1_score
 
 DATASET = 'mdb'
 NUM_WORKERS = 0
-N_EPISODES = 1
+N_EPISODES = 100
 N_CLASS = 12
 N_QUERY = 2 * 60  # (2 minutes of audio per class)
 N_SHOT = tuple(reversed((1, 2, 4, 8, 16, 32)))
