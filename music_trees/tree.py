@@ -231,9 +231,8 @@ class MusicTree(Tree):
         """ height of the lowest common ancestor"""
         breakpoint()
         all_paths = self.paths_to_leaves()
-        pred_path = list(reversed([p for p in all_paths if p[-1] == pred][0]))
-        truth_path = list(
-            reversed([p for p in all_paths if p[-1] == truth][0]))
+        pred_path = self.get_path_to_root(pred)
+        truth_path = self.get_path_to_root(truth)
 
         assert len(pred_path) == len(truth_path)
         for h, (pred_ancestor, truth_ancestor) in enumerate(zip(pred_path, truth_path)):
@@ -241,6 +240,16 @@ class MusicTree(Tree):
                 return h
 
         raise ValueError
+
+    def get_path_to_root(self, nid: str):
+        path = [nid]
+
+        current_nid = nid
+        while current_nid != 'root':
+            current_nid = self.parent(current_nid)
+            path.append(current_nid)
+
+        return path
 
     def get_ancestor(self, nid: str, height: int):
         """ finds the ancestor of the node at a particular height.
