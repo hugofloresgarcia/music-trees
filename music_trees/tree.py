@@ -229,8 +229,6 @@ class MusicTree(Tree):
 
     def hlca(self, pred: str, truth: str):
         """ height of the lowest common ancestor"""
-        breakpoint()
-        all_paths = self.paths_to_leaves()
         pred_path = self.get_path_to_root(pred)
         truth_path = self.get_path_to_root(truth)
 
@@ -255,12 +253,7 @@ class MusicTree(Tree):
         """ finds the ancestor of the node at a particular height.
         if the height is 0, returns the node itself
         """
-        all_paths = self.paths_to_leaves()
-        node_path = list([p for p in all_paths if p[-1] == nid])
-        assert len(node_path) == 1
-        node_path = node_path[0]
-        node_path = list(reversed(node_path))
-
+        node_path = self.get_path_to_root(nid)
         assert height < len(node_path)
 
         return node_path[height]
