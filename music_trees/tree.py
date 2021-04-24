@@ -246,7 +246,7 @@ class MusicTree(Tree):
 
         current_nid = nid
         while current_nid != 'root':
-            current_nid = self.parent(current_nid)
+            current_nid = self.parent(current_nid).uid
             path.append(current_nid)
 
         return path
