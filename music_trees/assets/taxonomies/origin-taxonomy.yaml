@@ -10,19 +10,17 @@ Asia:
     - gong 
     - gu 
     - toms 
-  India :
+  India:
     - dilruba 
     - sitar 
     - harmonium 
-	  - tabla 
+    - tabla
   Middle East:
     - oud
   Southeast Asia:
     - xylophone 
   Asian Unspecified:
-    - cymbal 
-
-  
+    - cymbal
 Europe:
   Italy:
     - violin 
@@ -72,20 +70,19 @@ Europe:
     - pipe organ 
     - sleigh bells 
   Poland Czech Republic:
-	 - english horn 
+    - english horn 
   England:
     - whistle 
   Turkey:
     - drum machine 
     - bass drum 
   Spain:
-  	 - castanet 
-
+    - castanet
 North America:
-  United States :
-    - acoustic guitar 
-    - clean electric guitar 
-    - electric bass 
+  United States:
+    - acoustic guitar
+    - clean electric guitar
+    - electric bass
     - banjo 
     - slide guitar 
     - dulcimer 
@@ -94,12 +91,11 @@ North America:
     - beatboxing 
     - vibraphone
     - high hat 
-    Hawaii:
-      - lap steel guitar
-
+  Hawaii:
+    - lap steel guitar
 Africa:
-  Egypt :
-  	- trumpet section
+  Egypt:
+    - trumpet section
     - snare drum  
     - harp 
     - bagpipe 
@@ -108,23 +104,20 @@ Africa:
     - rattle 
     - darbuka 
     - doumbek 
-
 South America:
   Portrogual: 
     - ukulele 
   Latin America:
-	 - shaker 
+    - shaker 
   Cuba:
     - bongo 
     - conga 
   Puerto Rico:
     - guiro 
     - maracas 
-
 Oceania:
   Australia:
     - claps 
-
 Other:
   Multiple:
     - bamboo flute 
@@ -136,7 +129,6 @@ Other:
     - drum set 
     - concertina 
     - cabasa 
-
   N/A:
     - male singer 
     - female singer 
