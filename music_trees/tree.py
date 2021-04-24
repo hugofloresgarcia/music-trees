@@ -229,6 +229,7 @@ class MusicTree(Tree):
 
     def hlca(self, pred: str, truth: str):
         """ height of the lowest common ancestor"""
+        breakpoint()
         all_paths = self.paths_to_leaves()
         pred_path = list(reversed([p for p in all_paths if p[-1] == pred][0]))
         truth_path = list(
