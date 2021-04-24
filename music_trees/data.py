@@ -14,6 +14,7 @@ import numpy as np
 from nussl import AudioSignal
 import music_trees as mt
 import tqdm
+from tqdm.contrib.concurrent import process_map
 
 import unicodedata
 import re
@@ -85,6 +86,7 @@ class MetaDataset(torch.utils.data.Dataset):
         super().__init__()
         # load the classlist for this partition
         self.root = mt.DATA_DIR / name
+        self.deterministic = deterministic
         self.files = self._load_files(name, partition)
         self.classes = sorted(list(self.files.keys()))
 
@@ -106,7 +108,6 @@ class MetaDataset(torch.utils.data.Dataset):
         # however, for validation and evaluation,
         # we want the episodes to remain deterministic
         # so we'll cache the episode metadata here
-        self.deterministic = deterministic
 
         self.epi_cache_root = self.cache_root.parent /  \
             f'{cache_name}-deterministic-episodes-{partition}-k{n_shot}-c{n_class}-q{n_query}'
@@ -116,10 +117,29 @@ class MetaDataset(torch.utils.data.Dataset):
         return self.n_episodes
 
     def _load_files(self, name: str, partition: str):
-        files = mt.utils.data.load_entry(mt.ASSETS_DIR / name / 'partition.json',
-                                         format='json')[partition]
+        classlist = mt.utils.data.load_entry(mt.ASSETS_DIR / 'partitions' / f'{name}.json',
+                                             format='json')[partition]
+
+        files = {classname: mt.utils.data.glob_all_metadata_entries(
+            self.root / classname, pattern='**/*.json') for classname in classlist}
+
         # sort by key
         files = OrderedDict(sorted(files.items(), key=lambda x: x[0]))
+
+        # if we're doing deterministic (validation or testing),
+        # then skip any augmented samples
+        if self.deterministic:
+            for name, records in files.items():
+                new_records = []
+                for entry in records:
+                    if 'effect_params' in entry:
+                        if entry['effect_params'] == {}:
+                            new_records.append(entry)
+                    else:
+                        new_records.append(entry)
+                assert len(new_records) > 0
+                files[name] = new_records
+
         return files
 
     def cache_dataset(self):
@@ -280,7 +300,7 @@ class MetaDataModule(pl.LightningDataModule):
         """ setup and cache datasets """
         # load all partitions
         partition = mt.utils.data.load_entry(
-            mt.ASSETS_DIR / self.name / 'partition.json')
+            mt.ASSETS_DIR / 'partitions' / f'{self.name}.json')
 
         if stage == 'fit':
             assert 'train' in partition

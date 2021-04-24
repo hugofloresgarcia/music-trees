@@ -6,6 +6,7 @@ from collections import OrderedDict
 from typing import List
 import argparse
 import logging
+import random
 
 from colorama import Fore
 from colorama import Style
@@ -39,42 +40,61 @@ def percentage_split(seq, percentages):
         prv = nxt
 
 
+def wrap_at(seq, index):
+    return seq[abs(index) % len(seq)]
+
+
+def wrap_set(seq, index, item):
+    seq[abs(index) % len(seq)] = item
+
+
+def iter_random_swap(seq, num_passes: int = 2):
+    for i in range(len(seq)):
+        new_pos = i + random.choice([-1, 0, 1])
+        tmp = wrap_at(seq, i)
+        seq[i] = wrap_at(seq, i+new_pos)
+        wrap_set(seq, i+new_pos, tmp)
+
+    return seq
+
+
 def _flat_split(leaves: List[mt.tree.MusicNode], partitions, sizes):
     """ split a list of instruments according to given test size"""
     leaves = sorted(
         leaves, key=lambda node: node.data['n_examples'], reverse=True)
 
     partition = {}
+    leaves = iter_random_swap(leaves, num_passes=4)
     splits = percentage_split(leaves, sizes)
-    breakpoint()
     for key, split in zip(partitions, splits):
-        partition[key] = {l.uid: l.data['records'] for l in split}
+        partition[key] = list(sorted(set(l.uid for l in split)))
 
     return partition
 
 
 def _update_partition(this: dict, other: dict):
-    """ given two dicts of dicts (this and other),
-    extends the dict of `this` with the contents of `other`
+    """ given two dicts of lists (this and other),
+    extends the list of `this` with the contents of `other`
     NOTE: they must have exactly the same keys or will raise an assertion error
     NOTE: not done in place (returns a copy of the dict)
     """
     this = dict(this)
     for key in this:
         assert key in other
-        assert isinstance(this[key], dict)
-        assert isinstance(other[key], dict)
+        assert isinstance(this[key], list)
+        assert isinstance(other[key], list)
 
-        this[key].update(other[key])
+        # this[key].update(other[key])
+        this[key].extend(other[key])
+
     return this
 
 
 def _hierarchical_split(tree: MusicTree, depth: int, partitions, sizes):
     # get all nodes at said depth
     nodes = tree.all_nodes_at_depth(depth)
-    partition = OrderedDict((p, {}) for p in partitions)
+    partition = OrderedDict((p, []) for p in partitions)
 
-    breakpoint()
     for node in nodes:
         assert not tree.is_leaf(
             node), "the nodes passed here should be parent nodes"
@@ -115,7 +135,7 @@ def hierarchical_partition(taxonomy: str, name: str, partitions: List[str],
 
     # shorten tree to desired depth
     assert depth > 0
-    tree = tree.shorten(depth)
+    tree = tree.shorten(depth+1)
 
     # even out the tree's depth on all branches
     tree = tree.even_depth()
@@ -143,7 +163,7 @@ def hierarchical_partition(taxonomy: str, name: str, partitions: List[str],
     display_partition_subtrees(tree, partition, records)
 
     # save the partitions
-    save_path = mt.ASSETS_DIR / name / 'partition.json'
+    save_path = mt.ASSETS_DIR / 'partitions' / f'{name}.json'
     mt.utils.data.save_entry(partition, save_path, format='json')
     logging.info(f'saved partition map to {save_path}')
 

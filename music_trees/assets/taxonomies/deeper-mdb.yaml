@@ -106,6 +106,7 @@ idiophones:
       - castanet
       - claps
       - snaps
+    xylophones:
       - xylophone
       - vibraphone
       - marimba
@@ -130,7 +131,7 @@ membranophones:
       - snare drum
       - kick drum
       - bass drum
-      - drum machine
+      # - drum machine
     hand percussion:
       - conga
       - bongo

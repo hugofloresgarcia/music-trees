@@ -79,10 +79,10 @@ class HierarchicalProtoNet(nn.Module):
                             help="root dimension")
         parser.add_argument('--height', type=int, default=0,
                             help="height of prototypical loss")
-        parser.add_argument('--taxonomy_name', type=str, default='deep-mdb',
+        parser.add_argument('--taxonomy_name', type=str, default='deeper-mdb',
                             help="name of taxonomy file. must be in \
                                     music_trees/assets/taxonomies")
-        parser.add_argument('--loss_decay', type=float, default=-0.5,
+        parser.add_argument('--loss_decay', type=float, default=0.5,
                             help="loss decay of the hierarchial loss w.r.t to height.\
                                   if the decay is positive, the loss will get exponentially \
                                   smaller as the height of the tree increases. if the decay is negative, \

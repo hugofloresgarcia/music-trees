@@ -1,11 +1,17 @@
 import music_trees as mt
 from copy import deepcopy
 
+import os
 import re
 from pathlib import Path
 import uuid
+import logging
+import warnings
 
 from nussl import AudioSignal
+
+import tqdm
+from tqdm.contrib.concurrent import thread_map, process_map
 
 NUM_AUGMENT_FOLDS = 2
 
@@ -33,9 +39,12 @@ def _generate_records_from_file(item: dict):
     # augment if necessary
     if item['augment']:
         for i in range(NUM_AUGMENT_FOLDS):
+            logger = logging.getLogger()
+            logger.disabled = True
             clips = [mt.utils.effects.augment_from_audio_signal(
                 sig) for sig in deepcopy(windows)]
             windows.extend(clips)
+            logger.disabled = False
 
     # create and save a new record for each window
     for sig in windows:
@@ -44,15 +53,15 @@ def _generate_records_from_file(item: dict):
         entry = mt.utils.data.make_entry(sig, uuid=str(uuid.uuid4()), format='wav',
                                          **extra)
 
-        if hasattr(signal, '_effect_params'):
-            entry['effect_params'] = signal._effect_params
+        if hasattr(sig, '_effect_params'):
+            entry['effect_params'] = sig._effect_params
         else:
             entry['effect_params'] = {}
 
         output_path = mt.utils.data.get_path(entry)
         output_path.parent.mkdir(exist_ok=True)
 
-        assert signal.has_data, f"attemped to write an empty audio_file: {entry}"
+        assert sig.has_data, f"attemped to write an empty audio_file: {entry}"
         sig.write_audio_to_file(output_path.with_suffix('.wav'),
                                 sample_rate=entry['sample_rate'])
         mt.utils.data.save_entry(entry, output_path.with_suffix('.json'))
@@ -87,11 +96,11 @@ def generate_data(dataset: str, name: str, example_length: float,
             'augment': augment,
         })
 
-    for f in file_records:
-        _generate_records_from_file(f)
+    # for f in tqdm.tqdm(file_records):
+    #     _generate_records_from_file(f)
 
-    # # do the magic
-    # with warnings.catch_warnings():
-    #     warnings.simplefilter("ignore")
-    #     process_map(_generate_records_from_file, file_records,
-    #                 max_workers=os.cpu_count() // 2)
+    # do the magic
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        process_map(_generate_records_from_file, file_records,
+                    max_workers=os.cpu_count() // 2)

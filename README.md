@@ -51,7 +51,7 @@ python -m music_trees.generate \
 
 ```bash
 python -m music_trees.generate \
-                --dataset medleydb \
+                --dataset mdb \
                 --name mdb-augmented \
                 --example_length 1.0 \
                 --augment true \
@@ -66,12 +66,7 @@ Partitions are written to `music_trees/assets/<DATASET_NAME>/partition.json`.
 Create a hierarchical train-val split with depth 1 for medleydb using the `joint-taxonomy` file:
 
 ```bash
-python music_trees/partition.py \
-                --taxonomy joint-taxonomy \
-                --name mdb 
-                --partitions train val
-                --sizes 0.7 0.3
-                --depth 2
+python music_trees/partition.py  --taxonomy deeper-mdb  --name mdb --partitions train val --sizes 0.7 0.3 --depth 4
 ```
 
 
@@ -97,15 +92,7 @@ To view what models are available, see `MetaTask.load_model_parser`. Note that e
 
 ```bash
 # trains a protonet with hierarchical loss with height 2 and a loss decay of 1
-export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py \
-                                            --model_name hprotonet \
-                                            --height 2 \
-                                            --d_root 128 \
-                                            --loss_decay 1 \
-                                            --name <NAME> \
-                                            --dataset mdb \
-                                            --num_workers 20  \
-                                            --learning_rate 0.03  
+export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py --model_name hprotonet --height 4 --d_root 128 --loss_decay 1 --name <NAME> --dataset mdb-augmented --num_workers 20  --learning_rate 0.03  
 ```
 
 a new experiment will be created under `runs/<NAME>/<VERSION>`. checkpoints, embedding spaces, and other goodies will be stored there. 
