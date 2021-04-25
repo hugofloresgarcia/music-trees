@@ -9,8 +9,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from str2bool import str2bool
-
 
 def get_all_query_records(episode: dict):
     return [e for e in episode['records']
@@ -27,8 +25,13 @@ def get_target_tensor(query_records: List[dict], classlist: List[str]):
                          for e in query_records])
 
 
-def loss_weight_fn(decay, height):
-    return torch.exp(-torch.tensor(decay*height).float())
+def call_loss_weight_fn(alpha: float, height: int, fn: str):
+
+    if fn == "exp":
+        # exponentially decaying weights
+        return torch.exp(-torch.tensor(alpha*height).float())
+    else:
+        raise ValueError(f'incorrect loss weight fn name: {fn}')
 
 
 def chunks(l, n):
@@ -71,6 +74,7 @@ class HierarchicalProtoNet(nn.Module):
         self.tree.show()
 
         self.loss_decay = args.loss_decay
+        self.loss_weight_fn = args.loss_weight_fn
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -82,7 +86,8 @@ class HierarchicalProtoNet(nn.Module):
         parser.add_argument('--taxonomy_name', type=str, default='deeper-mdb',
                             help="name of taxonomy file. must be in \
                                     music_trees/assets/taxonomies")
-        parser.add_argument('--loss_decay', type=float, default=0.5,
+        parser.add_argument('--loss_weight_fn', type=str, default='exp')
+        parser.add_argument('--loss_alpha', type=float, default=0.5,
                             help="loss decay of the hierarchial loss w.r.t to height.\
                                   if the decay is positive, the loss will get exponentially \
                                   smaller as the height of the tree increases. if the decay is negative, \
