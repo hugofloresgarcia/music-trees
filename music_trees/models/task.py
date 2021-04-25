@@ -146,7 +146,6 @@ class MetaTask(pl.LightningModule):
         """ same as test_step, but doesn't call
         log_metrics(), as evaluation metrics are
         computed separately. """
-        # slower, but allows for bigger episodes
         with torch.no_grad():
             output = self._main_step(episode, index)
         return batch_detach_cpu(output)
@@ -171,7 +170,7 @@ class MetaTask(pl.LightningModule):
         """
         self.log(f'loss/{stage}', output['loss'].detach().cpu())
 
-        val_check: bool = output['index'] % self.trainer.val_check_interval == 0
+        val_check: bool = self.global_step % self.trainer.val_check_interval == 0
 
         # grab the list of all tasks
         tasks = output['tasks']
@@ -196,14 +195,14 @@ class MetaTask(pl.LightningModule):
 
         # NOTE: assume a fixed num_classes across episodes
         num_classes = len(task['classlist'])
-        self.log(f'accuracy/{task["tag"]}/{stage}',
-                 accuracy(task['pred'], task['target']))
-        self.log(f'f1/{task["tag"]}/{stage}', f1(task['pred'], task['target'],
-                 num_classes=num_classes, average='weighted'))
-        self.log(f'loss-weighted/{task["tag"]}/{stage}',
-                 task['loss'] * task['loss_weight'])
-        self.log(f'loss-unweighted/{task["tag"]}/{stage}',
-                 task['loss'])
+        self.logger.experiment.add_scalar(f'accuracy/{task["tag"]}/{stage}',
+                                          accuracy(task['pred'], task['target']), self.global_step)
+        self.logger.experiment.add_scalar(f'f1/{task["tag"]}/{stage}', f1(task['pred'], task['target'],
+                                          num_classes=num_classes, average='weighted'), self.global_step)
+        self.logger.experiment.add_scalar(f'loss-weighted/{task["tag"]}/{stage}',
+                                          task['loss'] * task['loss_weight'], self.global_step)
+        self.logger.experiment.add_scalar(f'loss-unweighted/{task["tag"]}/{stage}',
+                                          task['loss'], self.global_step)
 
     def log_confusion_matrix(self, task: dict, stage: str):
         from sklearn.metrics import confusion_matrix

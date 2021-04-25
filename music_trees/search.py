@@ -12,8 +12,6 @@ SEEDS = [mt.SEED]
 
 # default hyperparameters go here
 DEFAULTS = {
-    'name': 'auto',
-
     'model_name': 'hprotonet',
     'height': 0,
     'd_root': 128,
@@ -38,7 +36,6 @@ CONFIGS = {
         'loss_weight_fn': 'exp',
         'loss_alpha': list(np.arange(-4, 4.25, 0.25)),
     },
-
 }
 
 
@@ -63,7 +60,8 @@ def run_trial(config, **kwargs):
     hparams = argparse.Namespace(**kwargs)
     hparams.__dict__.update(config)
 
-    hparams.name = f'_'.join(f"{k}={v}" for k, v in config.items())
+    hparams.name = exp.name.upper() + '-' + \
+        f'_'.join(f"{k}={v}" for k, v in config.items())
 
     parser = mt.train.load_parser(known_args=hparams2args(hparams))
     del hparams.parent_name
