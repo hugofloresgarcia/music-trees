@@ -259,8 +259,8 @@ class HierarchicalProtoNet(nn.Module):
         metatask['loss'] = loss
         metatask['pred'] = torch.argmax(dists, dim=-1, keepdim=False)
         metatask['loss'] = loss
-        metatask['loss_weight'] = loss_weight_fn(
-            self.loss_decay, 0).type_as(loss)
+        metatask['loss_weight'] = call_loss_weight_fn(
+            self.loss_decay, 0, self.loss_weight_fn).type_as(loss)
         return metatask
 
     def compute_ancestor_losses(self, episode: dict, metatask: dict):
@@ -302,8 +302,8 @@ class HierarchicalProtoNet(nn.Module):
             ancestor_dists = ancestor_dists.squeeze(0)
 
             loss = F.cross_entropy(-ancestor_dists, ancestor_targets.view(-1))
-            loss_weight = loss_weight_fn(self.loss_decay, height).type_as(
-                loss) if height <= self.height else 0
+            loss_weight = call_loss_weight_fn(self.loss_decay, height).type_as(
+                loss, self.loss_weight_fn) if height <= self.height else 0
             ancestor_task = {
                 'is_meta': True,
                 'classlist': ancestor_classlist,
