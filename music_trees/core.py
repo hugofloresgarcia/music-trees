@@ -14,6 +14,8 @@ DATA_DIR = ROOT_DIR / 'data'
 RUNS_DIR = ROOT_DIR / 'runs'
 RESULTS_DIR = ROOT_DIR / 'results'
 
+TQDM_DISABLE = True
+
 SEED = 42
 pl.seed_everything(SEED)
 nussl.utils.seed(SEED)

@@ -120,11 +120,13 @@ class MetaDataset(torch.utils.data.Dataset):
         classlist = mt.utils.data.load_entry(mt.ASSETS_DIR / 'partitions' / f'{name}.json',
                                              format='json')[partition]
 
+        logging.info('loading files')
         files = {classname: mt.utils.data.glob_all_metadata_entries(
             self.root / classname, pattern='**/*.json') for classname in classlist}
 
         # sort by key
         files = OrderedDict(sorted(files.items(), key=lambda x: x[0]))
+        logging.info('done')
 
         # if we're doing deterministic (validation or testing),
         # then skip any augmented samples
@@ -147,11 +149,12 @@ class MetaDataset(torch.utils.data.Dataset):
         logging.info(f'caching dataset...')
 
         # go through all classnames
-        for cl, records in self.files.items():
+        for cl, records in tqdm.tqdm(self.files.items(),  disable=mt.TQDM_DISABLE):
             # process_map(self.cache_if_needed, records)
-            for i, entry in tqdm.tqdm(list(enumerate(records))):
+            for i, entry in enumerate(records):
                 # all files belonging to a class
                 self.cache_if_needed(entry)
+        logging.info('dataset cached!')
 
     def cache_if_needed(self, entry: dict):
         """ Look for an entry in the cache. 

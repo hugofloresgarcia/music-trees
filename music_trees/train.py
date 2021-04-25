@@ -21,7 +21,7 @@ def get_exp_dir(name: str, version: int):
     return Path(mt.RUNS_DIR) / name / f"version_{version}"
 
 
-def train(args):
+def train(args, use_ray=False):
     """ train a model """
     # setup transforms
     audio_tfm = mt.preprocess.LogMelSpec(hop_length=mt.HOP_LENGTH,
@@ -75,6 +75,17 @@ def train(args):
     else:
         best_model_path = ckpt_callback.best_model_path
 
+    # hyperparameter tuning
+    if use_ray:
+        from ray.tune.integration.pytorch_lightning import TuneReportCallback
+        callbacks.append(
+            TuneReportCallback({
+                "f1/protonet/val": "f1/protonet/val",
+                "fscore_val": "fscore_val",
+            }, on="validation_end"))
+
+        args.progress_bar_refresh_rate = 0
+
     # Setup trainer
     trainer = pl.Trainer.from_argparse_args(
         args,
@@ -99,8 +110,7 @@ def train(args):
     trainer.fit(task, datamodule=datamodule)
 
 
-if __name__ == '__main__':
-    """Parse command-line arguments"""
+def load_parser(known_args=None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
@@ -121,11 +131,18 @@ if __name__ == '__main__':
     parser = mt.models.task.MetaTask.add_model_specific_args(parser)
 
     # load arguments specific to model
-    args, _ = parser.parse_known_args()
+    print('PARSING KNOWN ARGS')
+    args, _ = parser.parse_known_args(args=known_args)
 
     # add model specific arguments for model
     parser = mt.models.task.MetaTask.load_model_parser(parser, args)
 
+    return parser
+
+
+if __name__ == '__main__':
+
+    parser = load_parser()
     args = parser.parse_args()
 
     train(args)

@@ -92,7 +92,7 @@ To view what models are available, see `MetaTask.load_model_parser`. Note that e
 
 ```bash
 # trains a protonet with hierarchical loss with height 2 and a loss decay of 1
-export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py --model_name hprotonet --height 4 --d_root 128 --loss_decay 1 --name <NAME> --dataset mdb-augmented --num_workers 20  --learning_rate 0.03  
+export CUDA_VISIBLE_DEVICES='0' && python music_trees/train.py --model_name hprotonet --height 4 --d_root 128 --loss_alpha 1 --name <NAME> --dataset mdb-augmented --num_workers 20  --learning_rate 0.03  
 ```
 
 a new experiment will be created under `runs/<NAME>/<VERSION>`. checkpoints, embedding spaces, and other goodies will be stored there. 
@@ -109,6 +109,16 @@ To evaluate a model:
 ```bash
 export CUDA_VISIBLE_DEVICES='0' && python music_trees/eval.py --name <NAME> --version <VERSION>
 ```
+
+### Hyperparameter Search
+
+To run a hyperparameter search, add a config entry in `music_trees/search.py` and run:
+
+```bash
+export CUDA_VISIBLE_DEVICES=0,1 && python music_trees/search.py --name <CONFIG_NAME> --num_samples 20 --gpu_capacity 0.5
+```
+
+where `num_samples` is the number of trials to run in the search is `gpu_capacity` is an estimate of the amount of GPU memory (as a fraction) that each run will take. 
 
 ### Infer
 
