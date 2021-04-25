@@ -81,7 +81,6 @@ def train(args, use_ray=False):
         callbacks.append(
             TuneReportCallback({
                 "f1/protonet/val": "f1/protonet/val",
-                "fscore_val": "fscore_val",
             }, on="validation_end"))
 
         args.progress_bar_refresh_rate = 0
