@@ -63,7 +63,7 @@ def run_trial(config, **kwargs):
     hparams = argparse.Namespace(**kwargs)
     hparams.__dict__.update(config)
 
-    hparams.name = f'{ {k: v for k, v in config.items()}}'
+    hparams.name = f'_'.join(f"{k}={v}" for k, v in config.items())
 
     parser = mt.train.load_parser(known_args=hparams2args(hparams))
     del hparams.parent_name
@@ -73,7 +73,7 @@ def run_trial(config, **kwargs):
     return mt.train.train(hparams, use_ray=True)
 
 
-def run_experiment(exp, num_samples):
+def run_experiment(exp):
 
     scheduler = ASHAScheduler(
         metric="f1/protonet/val",
@@ -92,7 +92,7 @@ def run_experiment(exp, num_samples):
         local_dir=mt.RUNS_DIR,
         resources_per_trial={"cpu": 1, "gpu": exp.gpu_fraction},
         config=exp.config,
-        num_samples=num_samples,
+        num_samples=1,
         scheduler=scheduler,
         progress_reporter=reporter)
 
@@ -109,7 +109,6 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('--name', type=str, required=True)
-    parser.add_argument('--num_samples', type=int, default=20)
     parser.add_argument('--gpu_capacity', type=float, default=1.0)
 
     args = parser.parse_args()
@@ -122,4 +121,4 @@ if __name__ == "__main__":
                      config=CONFIGS[args.name], gpu_fraction=args.gpu_capacity)
     exp.hparams.parent_name = parent_name
 
-    run_experiment(exp, args.num_samples)
+    run_experiment(exp)
