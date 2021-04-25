@@ -112,10 +112,10 @@ export CUDA_VISIBLE_DEVICES='0' && python music_trees/eval.py --name <NAME> --ve
 
 ### Hyperparameter Search
 
-To run a hyperparameter search, add a config entry in `music_trees/search.py` and run:
+To run a hyperparameter search, add a new dictionary to CONFIGS in `music_trees/search.py` and run:
 
 ```bash
-export CUDA_VISIBLE_DEVICES=0,1 && python music_trees/search.py --name <CONFIG_NAME> --num_samples 20 --gpu_capacity 0.5
+export CUDA_VISIBLE_DEVICES=0,1 && python music_trees/search.py --name <CONFIG_NAME>
 ```
 
 where `num_samples` is the number of trials to run in the search is `gpu_capacity` is an estimate of the amount of GPU memory (as a fraction) that each run will take. 
