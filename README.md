@@ -114,6 +114,7 @@ export CUDA_VISIBLE_DEVICES='0' && python music_trees/eval.py --name <NAME> --ve
 
 To run a hyperparameter search, add a new dictionary to CONFIGS in `music_trees/search.py` and run:
 
+(pass a list of ints to CUDA_VISIBLE_DEVICES if you want to search on multiple GPUs)
 ```bash
 export CUDA_VISIBLE_DEVICES=0,1 && python music_trees/search.py --name <CONFIG_NAME>
 ```
