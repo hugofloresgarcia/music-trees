@@ -41,11 +41,10 @@ def evaluate(name: str, version: int):
     for n_shot in N_SHOT:
 
         # load our evaluation dataset
-        dm = mt.data.MetaDataModule(
-            name=DATASET, batch_size=1, num_workers=NUM_WORKERS,
-            n_episodes=N_EPISODES, n_class=N_CLASS,
-            n_shot=n_shot, n_query=N_QUERY, audio_tfm=audio_tfm,
-        )
+        tt_kwargs = dict(n_episodes=N_EPISODES, n_class=N_CLASS,
+                         n_shot=n_shot, n_query=N_QUERY, audio_tfm=audio_tfm,)
+        dm = mt.data.MetaDataModule(name=DATASET, batch_size=1,
+                                    num_workers=NUM_WORKERS, tt_kwargs=tt_kwargs)
         dm.setup('test')
 
         outputs = []
