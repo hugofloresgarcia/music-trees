@@ -182,7 +182,6 @@ class MetaTask(pl.LightningModule):
 
             # only do the dim reduction every so often
             if val_check:
-                if task['tag'] == 'protonet':
                 self.log_confusion_matrix(task, stage)
                 self.text_log_task(task, stage)
 
