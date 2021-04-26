@@ -183,10 +183,6 @@ class MetaTask(pl.LightningModule):
             # only do the dim reduction every so often
             if val_check:
                 if task['tag'] == 'protonet':
-                    print('\n\n')
-                    print(output['index'])
-                    print(self.global_step)
-                    print(task['classlist'])
                 self.log_confusion_matrix(task, stage)
                 self.text_log_task(task, stage)
 
@@ -200,14 +196,14 @@ class MetaTask(pl.LightningModule):
 
         # NOTE: assume a fixed num_classes across episodes
         num_classes = len(task['classlist'])
-        self.logger.experiment.add_scalar(f'accuracy/{task["tag"]}/{stage}',
-                                          accuracy(task['pred'], task['target']), self.global_step)
-        self.logger.experiment.add_scalar(f'f1/{task["tag"]}/{stage}', f1(task['pred'], task['target'],
-                                          num_classes=num_classes, average='weighted'), self.global_step)
-        self.logger.experiment.add_scalar(f'loss-weighted/{task["tag"]}/{stage}',
-                                          task['loss'] * task['loss_weight'], self.global_step)
-        self.logger.experiment.add_scalar(f'loss-unweighted/{task["tag"]}/{stage}',
-                                          task['loss'], self.global_step)
+        self.log(f'accuracy/{task["tag"]}/{stage}',
+                 accuracy(task['pred'], task['target']))
+        self.log(f'f1/{task["tag"]}/{stage}', f1(task['pred'], task['target'],
+                 num_classes=num_classes, average='weighted'))
+        self.log(f'loss-weighted/{task["tag"]}/{stage}',
+                 task['loss'] * task['loss_weight'])
+        self.log(f'loss-unweighted/{task["tag"]}/{stage}',
+                 task['loss'])
 
     def log_confusion_matrix(self, task: dict, stage: str):
         from sklearn.metrics import confusion_matrix

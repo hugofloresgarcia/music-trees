@@ -214,7 +214,7 @@ class MetaDataset(torch.utils.data.Dataset):
 
     def _episode_cache_get(self, index):
         """ retrieve from episode cache """
-        return mt.utils.data.load_entry(self.epi_cache_root / str(index), format='json')
+        return mt.utils.data.load_entry(self.epi_cache_root / f'{index}.json', format='json')
 
     def _episode_cache_set(self, index, item):
         """ write to episode cache """
@@ -223,7 +223,7 @@ class MetaDataset(torch.utils.data.Dataset):
 
     def _check_episode_cached(self, index):
         """ check if index exists in episode cache """
-        return Path(self.epi_cache_root / str(index)).exists()
+        return Path(self.epi_cache_root / str(index)).with_suffix('.json').exists()
 
     def generate_episode(self):
         """ generates an unprocessed episode"""
@@ -263,6 +263,7 @@ class MetaDataset(torch.utils.data.Dataset):
             episode = self._episode_cache_get(index)
         else:
             episode = self.generate_episode()
+            episode['episode_index'] = index  # for debugging
 
             if self.deterministic:
                 self._episode_cache_set(index, dict(episode))
