@@ -303,7 +303,7 @@ class HierarchicalProtoNet(nn.Module):
 
             loss = F.cross_entropy(-ancestor_dists, ancestor_targets.view(-1))
             loss_weight = call_loss_weight_fn(self.loss_alpha, height,  self.loss_weight_fn).type_as(
-                loss) if height <= self.height else 0
+                loss) if (total_height-height) <= self.height else 0
             ancestor_task = {
                 'is_meta': True,
                 'classlist': ancestor_classlist,

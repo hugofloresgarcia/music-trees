@@ -34,7 +34,8 @@ CONFIGS = {
     },
     'loss-exp': {
         'loss_weight_fn': 'exp',
-        'loss_alpha': list(np.arange(-4, 4.25, 0.25)),
+        'height': 2,
+        'loss_alpha': tune.grid_search(list(np.arange(-2, 2.5, 0.5))),
     },
 }
 
