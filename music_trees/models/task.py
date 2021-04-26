@@ -170,7 +170,7 @@ class MetaTask(pl.LightningModule):
         """
         self.log(f'loss/{stage}', output['loss'].detach().cpu())
 
-        val_check: bool = self.global_step % self.trainer.val_check_interval == 0
+        val_check: bool = stage == 'val' and output['index'] == 0
 
         # grab the list of all tasks
         tasks = output['tasks']
@@ -182,6 +182,11 @@ class MetaTask(pl.LightningModule):
 
             # only do the dim reduction every so often
             if val_check:
+                if task['tag'] == 'protonet':
+                    print('\n\n')
+                    print(output['index'])
+                    print(self.global_step)
+                    print(task['classlist'])
                 self.log_confusion_matrix(task, stage)
                 self.text_log_task(task, stage)
 

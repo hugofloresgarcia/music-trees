@@ -12,7 +12,7 @@ import termtables as tt
 
 MAX_EPISODES = 60000
 NUM_VAL_EPISODES = 300
-VAL_CHECK_INTERVAL = 300
+VAL_CHECK_INTERVAL = 150
 GRAD_CLIP = 1
 
 
@@ -28,14 +28,18 @@ def train(args, use_ray=False):
                                          win_length=mt.WIN_LENGTH)
 
     # set up data
+    kwargs = dict(n_class=args.n_class,
+                  n_shot=args.n_shot,
+                  n_query=args.n_query,
+                  audio_tfm=audio_tfm,)
+    tr_kwargs = dict(n_episodes=MAX_EPISODES, **kwargs)
+    cv_kwargs = dict(n_episodes=NUM_VAL_EPISODES, **kwargs)
     datamodule = mt.data.MetaDataModule(name=args.dataset,
                                         batch_size=args.batch_size,
                                         num_workers=args.num_workers,
-                                        n_episodes=MAX_EPISODES,
-                                        n_class=args.n_class,
-                                        n_shot=args.n_shot,
-                                        n_query=args.n_query,
-                                        audio_tfm=audio_tfm)
+                                        tr_kwargs=tr_kwargs,
+                                        cv_kwargs=cv_kwargs,
+                                        tt_kwargs=cv_kwargs)
 
     # set up model
     task = mt.models.task.MetaTask(args)

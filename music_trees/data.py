@@ -286,18 +286,17 @@ class MetaDataModule(pl.LightningDataModule):
             Any kwargs for MetaDataset. 
     """
 
-    def __init__(self, name, n_shot: int, n_query: int, n_class: int,
-                 batch_size=64, num_workers=None, **kwargs):
+    def __init__(self, name, batch_size=64, num_workers=None,
+                 tr_kwargs: dict = None, cv_kwargs: dict = None,
+                 tt_kwargs: dict = None):
         super().__init__()
         self.name = name
         self.batch_size = batch_size
         self.num_workers = num_workers
 
-        self.n_shot = n_shot
-        self.n_query = n_query
-        self.n_class = n_class
-
-        self.kwargs = kwargs
+        self.tr_kwargs = tr_kwargs if tr_kwargs is not None else {}
+        self.cv_kwargs = cv_kwargs if cv_kwargs is not None else {}
+        self.tt_kwargs = tt_kwargs if tt_kwargs is not None else {}
 
     def setup(self, stage=None):
         """ setup and cache datasets """
@@ -308,23 +307,19 @@ class MetaDataModule(pl.LightningDataModule):
         if stage == 'fit':
             assert 'train' in partition
             self.dataset = MetaDataset(self.name, partition='train', deterministic=False,
-                                       n_shot=self.n_shot, n_query=self.n_query, n_class=self.n_class,
-                                       **self.kwargs)
+                                       **self.tr_kwargs)
 
             if 'val' in partition:
                 self.val_dataset = MetaDataset(self.name, partition='val', deterministic=True,
-                                               n_shot=self.n_shot, n_query=self.n_query, n_class=self.n_class,
-                                               **self.kwargs)
+                                               **self.cv_kwargs)
             else:
                 self.val_dataset = MetaDataset(self.name, partition='test', deterministic=True,
-                                               n_shot=self.n_shot, n_query=self.n_query, n_class=self.n_class,
-                                               **self.kwargs)
+                                               **self.cv_kwargs)
 
         if stage == 'test':
             partition = 'test' if 'test' in partition else 'val'
             self.test_dataset = MetaDataset(self.name, partition=partition, deterministic=True,
-                                            n_shot=self.n_shot, n_query=self.n_query, n_class=self.n_class,
-                                            **self.kwargs)
+                                            **self.tt_kwargs)
 
     @staticmethod
     def add_argparse_args(parser):

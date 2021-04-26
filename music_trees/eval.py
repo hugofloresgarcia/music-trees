@@ -50,7 +50,9 @@ def evaluate(name: str, version: int):
 
         outputs = []
         for index, episode in tqdm(enumerate(dm.test_dataloader())):
+            # episode should classlist, etc.
             episode = batch2cuda(episode)
+            # output should have all predictions and targets, etc.
             output = model.eval_step(episode, index)
             outputs.append(output)
 
