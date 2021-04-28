@@ -1,12 +1,17 @@
 """ analyze.py - experiment analysis script"""
 import music_trees as mt
 
+from collections import OrderedDict
 import glob
 from pathlib import Path
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+
+ALL_COLORS = ["264653", "2a9d8f", "e9c46a", "f4a261", "e76f51"] + \
+    ["606c38", "283618", "fefae0", "dda15e", "bc6c25"] + \
+    ["0b4eb3", "48ab62", "5a6e8c", "1e375c", "916669"]
 
 
 def bar_with_error(df: pd.DataFrame, dv: str, iv: str, cond: str):
@@ -15,21 +20,35 @@ def bar_with_error(df: pd.DataFrame, dv: str, iv: str, cond: str):
     iv --> independent variable
     cond --> conditions (groupings)
     """
+    bar_width = 0.25
 
     # get all possible values for the IV and conditions
     all_trials = df[iv].unique()
     all_conds = df[cond].unique()
 
-    means = {c: [] for c in all_conds}
-    stds = {c: [] for c in all_conds}
+    means = OrderedDict((tr, []) for tr in all_trials)
+    stds = OrderedDict((tr, []) for tr in all_trials)
     for trial in all_trials:
         for c in all_conds:
             values = df[(df[iv] == trial) & (df[cond] == c)]
 
-            means[c].append(np.mean(values))
-            stds[c].append(np.std(values))
+            means[trial].append(np.mean(values))
+            stds[trial].append(np.std(values))
 
-    raise NotImplementedError
+    # make a bar plot for each condition
+    bp = np.arange(len(means[0]))
+    bar_pos = OrderedDict((tr, bp + i*bar_width)
+                          for i, tr in enumerate(all_trials))
+    for idx, tr in enumerate(all_trials):
+        plt.bar(bar_pos[tr], means[tr], color=ALL_COLORS[idx],
+                edgecolor='white', label=tr)
+
+    plt.xlabel(cond)
+    plt.xticks(ticks=[i + bar_width for i in range(len(all_conds))],
+               labels=all_conds)
+
+    plt.legend()
+    breakpoint()
 
 
 def analyze(df: pd.DataFrame):
