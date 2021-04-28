@@ -171,8 +171,6 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
                     'value': np.mean([tree.hierarchical_recall(p, tgt) for p, tgt in zip(pred, target)]),
                     'tag': t['tag'],
                 })
-    breakpoint()
-
     return pd.DataFrame(results)
 
 
