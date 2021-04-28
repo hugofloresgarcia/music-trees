@@ -10,12 +10,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from natsort import natsorted
 
+ANALYSES_DIR = mt.ROOT_DIR / 'analyses'
+
 ALL_COLORS = ["264653", "2a9d8f", "e9c46a", "f4a261", "e76f51"] + \
     ["606c38", "283618", "fefae0", "dda15e", "bc6c25"] + \
     ["0b4eb3", "48ab62", "5a6e8c", "1e375c", "916669"]
 
 
-def bar_with_error(df: pd.DataFrame, dv: str, iv: str, cond: str):
+def bar_with_error(df: pd.DataFrame, dv: str, iv: str, cond: str) -> plt.figure:
     """
     dv --> dependent variable
     iv --> independent variable
@@ -57,32 +59,37 @@ def bar_with_error(df: pd.DataFrame, dv: str, iv: str, cond: str):
     return fig
 
 
-def analyze(df: pd.DataFrame):
+def analyze(df: pd.DataFrame, name: str):
     """
     run a full analysis and model comparison given
     a DataFrame with multiple results
     """
+    output_dir = ANALYSES_DIR / name
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     metrics = df['metric'].unique()
     task_tags = df['tag'].unique()
-    n_shots = df['n_shot'].unique()
-    models = df['model'].unique()
 
     for tag in task_tags:
+        subdir = output_dir / tag
+        subdir.mkdir(exist_ok=True)
+
         for metric in metrics:
             # get the df subset with this
             # metric and tag
             subset = df[(df.tag == tag) & (df.metric == metric)]
-            breakpoint()
 
             errorbar = bar_with_error(subset, dv='value',
-                                      iv='taxonomy_name', cond='n_shot')
+                                      iv='name', cond='n_shot')
 
-            raise NotImplementedError
+            errorbar.savefig(subdir / f'{metric}.png')
+
+            breakpoint()
 
     raise NotImplementedError
 
 
-def analyze_folder(path_to_results: str):
+def analyze_folder(path_to_results: str, name: str):
     """
     Will look for .csv files recursively and create a single
     DataFrame for all of them
@@ -92,7 +99,7 @@ def analyze_folder(path_to_results: str):
         str(Path(path_to_results) / '**/*.csv'), recursive=True)
     df = pd.concat([pd.read_csv(fp) for fp in filepaths], ignore_index=True)
 
-    return analyze(df)
+    return analyze(df, name)
 
 
 if __name__ == "__main__":
@@ -102,6 +109,8 @@ if __name__ == "__main__":
 
     parser.add_argument('path_to_results', type=str,
                         help='path to the folder containing result csvs')
+    parser.add_argument('name', type=str,
+                        help='name of folder with analysis output. will be under /analyses/')
     args = parser.parse_args()
 
     analyze_folder(**vars(args))
