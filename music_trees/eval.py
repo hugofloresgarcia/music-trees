@@ -12,7 +12,7 @@ from sklearn.metrics import f1_score, accuracy_score
 
 DATASET = 'mdb'
 NUM_WORKERS = 0
-N_EPISODES = 1
+N_EPISODES = 100
 N_CLASS = 12
 N_QUERY = 2 * 60  # (2 minutes of audio per class)
 N_SHOT = tuple(reversed((1, 2, 4, 8, 16, 32)))
@@ -37,7 +37,6 @@ def evaluate(name: str, version: int):
     audio_tfm = mt.preprocess.LogMelSpec(hop_length=mt.HOP_LENGTH,
                                          win_length=mt.WIN_LENGTH)
 
-    
     all_results = []
     for n_shot in N_SHOT:
 
@@ -134,20 +133,19 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
                 'tag': t['tag'],
             })
 
-            # raw episode accuracy 
+            # raw episode accuracy
             results.append({
                 'episode_idx': index,
                 'metric': 'epi-accuracy',
                 'value': accuracy_score(target, pred, normalize=True),
                 'tag': t['tag'],
             })
-            
+
             # TODO export the confusion matrix as a png don't use the function below
             # mt.models.task.MetaTask.log_confusion_matrix(t, index)
 
-            
             if 'tree' not in t['tag']:
-                # track the highest least common ancestor 
+                # track the highest least common ancestor
                 results.append({
                     'episode_idx': index,
                     'metric': 'hlca-mistake',

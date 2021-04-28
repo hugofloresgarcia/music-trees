@@ -16,3 +16,5 @@ __pycache__/
 *.egg-info/
 runs-apr-16-21.tar.gz
 runs*.tar.gz
+results*.tar.gz
+runs*/
