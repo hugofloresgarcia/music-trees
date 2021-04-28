@@ -7,6 +7,7 @@ runs/*
 !runs/.gitkeep
 results/*
 !results/,gitkeep
+analyses/*
 
 __pycache__/
 .DS_Store
