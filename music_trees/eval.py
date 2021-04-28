@@ -7,7 +7,7 @@ import torch
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, accuracy_score
 
 
 DATASET = 'mdb'
@@ -37,6 +37,7 @@ def evaluate(name: str, version: int):
     audio_tfm = mt.preprocess.LogMelSpec(hop_length=mt.HOP_LENGTH,
                                          win_length=mt.WIN_LENGTH)
 
+    
     all_results = []
     for n_shot in N_SHOT:
 
@@ -47,10 +48,13 @@ def evaluate(name: str, version: int):
                                     num_workers=NUM_WORKERS, tt_kwargs=tt_kwargs)
         dm.setup('test')
 
+        epi_classes = []
         outputs = []
         for index, episode in tqdm(enumerate(dm.test_dataloader())):
             # episode should classlist, etc.
             episode = batch2cuda(episode)
+            # track the class list for each episode
+            epi_classes.append(episode['classlist'])
             # output should have all predictions and targets, etc.
             output = model.eval_step(episode, index)
             outputs.append(output)
@@ -130,7 +134,20 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
                 'tag': t['tag'],
             })
 
+            # raw episode accuracy 
+            results.append({
+                'episode_idx': index,
+                'metric': 'epi-accuracy',
+                'value': accuracy_score(target, pred, normalize=True),
+                'tag': t['tag'],
+            })
+            
+            # TODO export the confusion matrix as a png don't use the function below
+            # mt.models.task.MetaTask.log_confusion_matrix(t, index)
+
+            
             if 'tree' not in t['tag']:
+                # track the highest least common ancestor 
                 results.append({
                     'episode_idx': index,
                     'metric': 'hlca-mistake',
@@ -139,6 +156,7 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
                     'tag': t['tag'],
                 })
 
+                # tracking the hierarchical precision
                 results.append({
                     'episode_idx': index,
                     'metric': 'hP',
@@ -146,6 +164,7 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
                     'tag': t['tag'],
                 })
 
+                # tracking the hierarchical recall
                 results.append({
                     'episode_idx': index,
                     'metric': 'hR',
