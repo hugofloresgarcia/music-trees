@@ -15,7 +15,7 @@ DEFAULTS = {
     'model_name': 'hprotonet',
     'height': 0,
     'd_root': 128,
-    'loss_alpha': 0.5,
+    'loss_alpha': 1,
 
     'dataset': 'mdb-aug',
     'num_workers': 20,
@@ -29,6 +29,10 @@ CONFIGS = {
     'tree-height': {
         'height': tune.grid_search(list(range(6))),
     },
+    'tree-height-v2': {
+        'loss_alpha': 0.25,
+        'height': tune.grid_search([3, 4, 5]),
+    },
     'd_root': {
         'd_root': tune.grid_search([64, 128, 256, 512]),
     },
@@ -37,6 +41,10 @@ CONFIGS = {
         'height': 2,
         'loss_alpha': tune.grid_search(list(np.arange(-2, 2.5, 0.5))),
     },
+    'taxonomies': {
+        'height': 2,
+        'taxonomy_name': tune.grid_search(['random-taxonomy', 'origin-taxonomy', 'deeper-mdb'])
+    }
 }
 
 

@@ -150,7 +150,7 @@ class MetaDataset(torch.utils.data.Dataset):
 
         # go through all classnames
         for cl, records in tqdm.tqdm(self.files.items(),  disable=mt.TQDM_DISABLE):
-            # process_map(self.cache_if_needed, records)
+            # process_map(self.cache_if_needed, records, disable=mt.TQDM_DISABLE)
             for i, entry in enumerate(records):
                 # all files belonging to a class
                 self.cache_if_needed(entry)
