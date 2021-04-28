@@ -17,7 +17,7 @@ ALL_COLORS = ["264653", "2a9d8f", "e9c46a", "f4a261", "e76f51"] + \
     ["0b4eb3", "48ab62", "5a6e8c", "1e375c", "916669"]
 
 
-def bar_with_error(df: pd.DataFrame, dv: str, iv: str, cond: str) -> plt.figure:
+def bar_with_error(df: pd.DataFrame, dv: str, iv: str, cond: str, title: str = None) -> plt.figure:
     """
     dv --> dependent variable
     iv --> independent variable
@@ -51,7 +51,7 @@ def bar_with_error(df: pd.DataFrame, dv: str, iv: str, cond: str) -> plt.figure:
     plt.xlabel(cond)
     plt.xticks(ticks=[i + bar_width for i in range(len(all_conds))],
                labels=all_conds)
-
+    plt.title(title)
     plt.legend()
 
     fig = plt.gcf()
@@ -82,8 +82,8 @@ def analyze(df: pd.DataFrame, name: str):
             if subset.empty:
                 continue
 
-            errorbar = bar_with_error(subset, dv='value',
-                                      iv='name', cond='n_shot')
+            errorbar = bar_with_error(subset, dv='value', iv='name',
+                                      cond='n_shot', title=metric)
 
             errorbar.savefig(subdir / f'{metric}.png')
 
