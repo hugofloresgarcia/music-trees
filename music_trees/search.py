@@ -29,6 +29,10 @@ CONFIGS = {
     'tree-height': {
         'height': tune.grid_search(list(range(6))),
     },
+    'tree-height-v2': {
+        'loss_alpha': 0.25,
+        'height': tune.grid_search([3, 4, 5]),
+    },
     'd_root': {
         'd_root': tune.grid_search([64, 128, 256, 512]),
     },
@@ -39,7 +43,7 @@ CONFIGS = {
     },
     'taxonomies': {
         'height': 2,
-        'taxonomy_name': tune.grid_search(['random-taxonomy', 'origin-taxonomy'])
+        'taxonomy_name': tune.grid_search(['random-taxonomy', 'origin-taxonomy', 'deeper-mdb'])
     }
 }
 
