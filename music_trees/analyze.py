@@ -45,7 +45,8 @@ def significance(df: pd.DataFrame, dv: str, iv: str, cond: str):
                 'b': s2,
                 cond: c,
                 'p': p,
-                'stat': stat
+                'stat': stat,
+                'significant?': p < 0.01
             })
 
     return pd.DataFrame(pvals)
