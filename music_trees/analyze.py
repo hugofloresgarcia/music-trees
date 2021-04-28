@@ -26,24 +26,22 @@ def significance(df: pd.DataFrame, dv: str, iv: str, cond: str):
     # get all possible values for the IV and conditions
     all_trials = df[iv].unique()
     all_conds = list(natsorted(df[cond].unique()))
-
-    pairs = permutations(all_trials, 2)
+    pairs = list(permutations(all_trials, 2))
 
     pvals = []
-    for c in all_conds:
+    for co in all_conds:
         for pair in pairs:
-            subset = df[df[cond] == c]
+            subset = df[df[cond] == co]
             s1, s2 = pair
 
             df1 = subset[subset[iv] == s1].copy()
             df2 = subset[subset[iv] == s2].copy()
 
             stat, p = wilcoxon(df1['value'].values, df2['value'].values)
-
             pvals.append({
                 'a': s1,
                 'b': s2,
-                cond: c,
+                cond: co,
                 'p': p,
                 'stat': stat,
                 'significant?': p < 0.01
