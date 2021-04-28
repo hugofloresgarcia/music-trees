@@ -7,8 +7,6 @@ from pathlib import Path
 
 import pytorch_lightning as pl
 import torch
-from str2bool import str2bool
-import termtables as tt
 
 MAX_EPISODES = 60000
 NUM_VAL_EPISODES = 300
