@@ -4,17 +4,51 @@ import music_trees as mt
 from collections import OrderedDict
 import glob
 from pathlib import Path
+import random
+from itertools import combinations, permutations
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from natsort import natsorted
+from scipy.stats import wilcoxon
 
 ANALYSES_DIR = mt.ROOT_DIR / 'analyses'
 
-ALL_COLORS = ["264653", "2a9d8f", "e9c46a", "f4a261", "e76f51"] + \
-    ["606c38", "283618", "fefae0", "dda15e", "bc6c25"] + \
-    ["0b4eb3", "48ab62", "5a6e8c", "1e375c", "916669"]
+ALL_COLORS = ["ff595e", "ffca3a", "8ac926", "1982c4", "6a4c93"]
+random.shuffle(ALL_COLORS)
+
+
+def significance(df: pd.DataFrame, dv: str, iv: str, cond: str):
+    """ 
+    returns a DataFrame with p values for each condition between independent variables
+    """
+    # get all possible values for the IV and conditions
+    all_trials = df[iv].unique()
+    all_conds = list(natsorted(df[cond].unique()))
+
+    pairs = permutations(all_trials, 2)
+
+    pvals = []
+    for c in all_conds:
+        for pair in pairs:
+            subset = df[df[cond] == c]
+            s1, s2 = pair
+
+            df1 = subset[subset[iv] == s1].copy()
+            df2 = subset[subset[iv] == s2].copy()
+
+            stat, p = wilcoxon(df1['value'].values, df2['value'].values)
+
+            pvals.append({
+                'a': s1,
+                'b': s2,
+                cond: c,
+                'p': p,
+                'stat': stat
+            })
+
+    return pd.DataFrame(pvals)
 
 
 def bar_with_error(df: pd.DataFrame, dv: str, iv: str, cond: str, title: str = None) -> plt.figure:
@@ -23,6 +57,7 @@ def bar_with_error(df: pd.DataFrame, dv: str, iv: str, cond: str, title: str = N
     iv --> independent variable
     cond --> conditions (groupings)
     """
+    plt.rcParams["figure.figsize"] = (7, 4)
 
     # get all possible values for the IV and conditions
     all_trials = df[iv].unique()
@@ -49,6 +84,7 @@ def bar_with_error(df: pd.DataFrame, dv: str, iv: str, cond: str, title: str = N
                 color='#'+ALL_COLORS[idx], edgecolor='white', label=tr)
 
     plt.xlabel(cond)
+    plt.ylabel('value')
     plt.xticks(ticks=[i + bar_width for i in range(len(all_conds))],
                labels=all_conds)
     plt.title(title)
@@ -82,10 +118,16 @@ def analyze(df: pd.DataFrame, name: str):
             if subset.empty:
                 continue
 
-            errorbar = bar_with_error(subset, dv='value', iv='name',
-                                      cond='n_shot', title=metric)
+            dv = 'value'
+            iv = 'name'
+            cond = 'n_shot'
 
+            errorbar = bar_with_error(subset, dv=dv, iv=iv,
+                                      cond=cond, title=metric)
             errorbar.savefig(subdir / f'{metric}.png')
+
+            sig_df = significance(subset, dv=dv, iv=iv, cond=cond)
+            sig_df.to_csv(subdir / f'significance-{metric}.csv')
 
     breakpoint()
 
