@@ -23,11 +23,12 @@ def bar_with_error(df: pd.DataFrame, dv: str, iv: str, cond: str) -> plt.figure:
     iv --> independent variable
     cond --> conditions (groupings)
     """
-    bar_width = 0.25
 
     # get all possible values for the IV and conditions
     all_trials = df[iv].unique()
     all_conds = list(natsorted(df[cond].unique()))
+
+    bar_width = 0.25 * 3 / len(all_trials)
 
     means = OrderedDict((tr, []) for tr in all_trials)
     stds = OrderedDict((tr, []) for tr in all_trials)
@@ -78,13 +79,15 @@ def analyze(df: pd.DataFrame, name: str):
             # get the df subset with this
             # metric and tag
             subset = df[(df.tag == tag) & (df.metric == metric)]
+            if subset.empty:
+                continue
 
             errorbar = bar_with_error(subset, dv='value',
                                       iv='name', cond='n_shot')
 
             errorbar.savefig(subdir / f'{metric}.png')
 
-            breakpoint()
+    breakpoint()
 
     raise NotImplementedError
 
