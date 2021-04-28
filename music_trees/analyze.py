@@ -8,6 +8,7 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from natsort import natsorted
 
 ALL_COLORS = ["264653", "2a9d8f", "e9c46a", "f4a261", "e76f51"] + \
     ["606c38", "283618", "fefae0", "dda15e", "bc6c25"] + \
@@ -24,31 +25,36 @@ def bar_with_error(df: pd.DataFrame, dv: str, iv: str, cond: str):
 
     # get all possible values for the IV and conditions
     all_trials = df[iv].unique()
-    all_conds = df[cond].unique()
+    all_conds = list(natsorted(df[cond].unique()))
 
     means = OrderedDict((tr, []) for tr in all_trials)
     stds = OrderedDict((tr, []) for tr in all_trials)
     for trial in all_trials:
         for c in all_conds:
-            values = df[(df[iv] == trial) & (df[cond] == c)]
+            # get the list of all scores per episode
+            values = df[(df[iv] == trial) & (df[cond] == c)][dv].values
 
             means[trial].append(np.mean(values))
             stds[trial].append(np.std(values))
 
     # make a bar plot for each condition
-    bp = np.arange(len(means[0]))
+    bp = np.arange(len(list(means.values())[0]))
     bar_pos = OrderedDict((tr, bp + i*bar_width)
                           for i, tr in enumerate(all_trials))
     for idx, tr in enumerate(all_trials):
-        plt.bar(bar_pos[tr], means[tr], color=ALL_COLORS[idx],
-                edgecolor='white', label=tr)
+        plt.bar(bar_pos[tr], means[tr], yerr=stds[tr], width=bar_width, capsize=12*bar_width,
+                color='#'+ALL_COLORS[idx], edgecolor='white', label=tr)
 
     plt.xlabel(cond)
     plt.xticks(ticks=[i + bar_width for i in range(len(all_conds))],
                labels=all_conds)
 
     plt.legend()
-    breakpoint()
+
+    fig = plt.gcf()
+    plt.close()
+
+    return fig
 
 
 def analyze(df: pd.DataFrame):
@@ -68,7 +74,8 @@ def analyze(df: pd.DataFrame):
             subset = df[(df.tag == tag) & (df.metric == metric)]
             breakpoint()
 
-            bar_with_error(df, dv='value', iv='taxonomy_name', conds='n_shot')
+            errorbar = bar_with_error(subset, dv='value',
+                                      iv='taxonomy_name', cond='n_shot')
 
             raise NotImplementedError
 
