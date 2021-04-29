@@ -61,7 +61,7 @@ def bar_with_error(df: pd.DataFrame, dv: str, iv: str,
     plt.rcParams["figure.figsize"] = (7, 4)
 
     # get all possible values for the IV and conditions
-    all_trials = df[iv].unique()
+    all_trials = list(natsorted(df[iv].unique()))
     all_conds = list(natsorted(df[cond].unique()))
 
     bar_width = 0.25 * 3 / len(all_trials)
@@ -132,6 +132,7 @@ def epi_below_base(df: pd.DataFrame, tag: str, metric: str):
                                         'model-val': compared_val,
                                         'difference': based_val - compared_val
                                         })
+
     return pd.DataFrame(tracked_epis)
 
 
@@ -173,7 +174,7 @@ def epi_above_base(df: pd.DataFrame, tag: str, metric: str, take_top: int = 3):
                     })
             # sorting this temp list by the compared models values in descending order
             temp_tracked_epis = sorted(
-                temp_tracked_epis, key=lambda tracked: tracked['model-val'], reverse=True)
+                temp_tracked_epis, key=lambda tracked: tracked['difference'], reverse=True)
 
             # using enumerate here instead of slicing for compact error checking
             for i, tracked_epi in enumerate(temp_tracked_epis):
@@ -280,15 +281,19 @@ def analyze(df: pd.DataFrame, name: str):
             errorbar.savefig(subdir / f'{metric}.png')
 
             sig_df = significance(subset, dv=dv, iv=iv, cond=cond)
-            sig_df.to_csv(subdir / f'significance-{metric}.csv')
+            sig_dir = subdir / 'significance'
+            sig_dir.mkdir(exist_ok=True)
+            sig_df.to_csv(sig_dir / f'significance-{metric}.csv')
 
+            comp_dir = subdir / 'episode-comparisons'
+            comp_dir.mkdir(exist_ok=True)
             epi_above_df = epi_above_base(subset, tag, metric)
-            epi_above_df.to_csv(subdir / f'episodes-above-base-{metric}.csv')
+            epi_above_df.to_csv(comp_dir / f'episodes-above-base-{metric}.csv')
 
             epi_below_df = epi_below_base(subset, tag, metric)
-            epi_below_df.to_csv(subdir / f'episodes-below-base-{metric}.csv')
+            epi_below_df.to_csv(comp_dir / f'episodes-below-base-{metric}.csv')
 
-    raise NotImplementedError
+    return
 
 
 def analyze_folder(path_to_results: str, name: str):

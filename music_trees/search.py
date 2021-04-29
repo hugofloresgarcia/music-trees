@@ -26,7 +26,7 @@ CONFIGS = {
     'data-aug': {
         'dataset': tune.grid_search(['mdb-aug', 'mdb']),
     },
-    'tree-height': {
+    'tree-height-v3': {
         'height': tune.grid_search(list(range(6))),
     },
     'tree-height-v2': {

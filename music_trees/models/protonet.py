@@ -25,15 +25,6 @@ def get_target_tensor(query_records: List[dict], classlist: List[str]):
                          for e in query_records])
 
 
-def call_loss_weight_fn(alpha: float, height: int, fn: str):
-
-    if fn == "exp":
-        # exponentially decaying weights
-        return torch.exp(-torch.tensor(alpha*height).float())
-    else:
-        raise ValueError(f'incorrect loss weight fn name: {fn}')
-
-
 def chunks(l, n):
     """https://stackoverflow.com/questions/312443/how-do-you-split-a-list-into-evenly-sized-chunks"""
     n = max(1, n)
@@ -72,6 +63,10 @@ class HierarchicalProtoNet(nn.Module):
         self.tree = mt.tree.MusicTree.from_taxonomy(taxonomy)
         self.tree.even_depth()
         self.tree.show()
+
+        # trainable hierarchical loss vector
+        self.hloss_vector = nn.Parameter(
+            torch.ones(self.height), requires_grad=True)
 
         self.loss_alpha = args.loss_alpha
         self.loss_weight_fn = args.loss_weight_fn
@@ -259,9 +254,16 @@ class HierarchicalProtoNet(nn.Module):
         metatask['loss'] = loss
         metatask['pred'] = torch.argmax(dists, dim=-1, keepdim=False)
         metatask['loss'] = loss
-        metatask['loss_weight'] = call_loss_weight_fn(
+        metatask['loss_weight'] = self.call_loss_weight_fn(
             self.loss_alpha, 0, self.loss_weight_fn).type_as(loss)
         return metatask
+
+    def call_loss_weight_fn(self, alpha: float, height: int, fn: str):
+        if fn == "exp":
+            # exponentially decaying weights
+            return torch.exp(-torch.tensor(alpha*height).float())
+        else:
+            raise ValueError(f'incorrect loss weight fn name: {fn}')
 
     def compute_ancestor_losses(self, episode: dict, metatask: dict):
         """ 
@@ -302,7 +304,7 @@ class HierarchicalProtoNet(nn.Module):
             ancestor_dists = ancestor_dists.squeeze(0)
 
             loss = F.cross_entropy(-ancestor_dists, ancestor_targets.view(-1))
-            loss_weight = call_loss_weight_fn(self.loss_alpha, height,  self.loss_weight_fn).type_as(
+            loss_weight = self.call_loss_weight_fn(self.loss_alpha, height,  self.loss_weight_fn).type_as(
                 loss) if (total_height-height) <= self.height else 0
             ancestor_task = {
                 'is_meta': True,
@@ -336,11 +338,16 @@ class HierarchicalProtoNet(nn.Module):
         leaf_task = self.compute_leaf_loss(episode, input_task)
         ancestor_tasks = self.compute_ancestor_losses(episode, input_task)
 
+        # weigh the ancestor losses by a trainable vector, but not the leaf one (that is the one we wish to get good at)
+        ancestor_losses = torch.stack([t['loss'] for t in ancestor_tasks])
+        breakpoint()
+        print(F.softmax(self.hloss_vector))
+
+        output['loss'] = leaf_task['loss'] + \
+            F.softmax(self.hloss_vector) * ancestor_losses
+
         # insert metatasks in ascending order
         metatasks = [leaf_task] + ancestor_tasks
-        output['tasks'] = metatasks
-
-        output['loss'] = sum(t['loss']*t['loss_weight']
-                             for t in output['tasks'])
+        output['tasks'] = metatasks\
 
         return output
