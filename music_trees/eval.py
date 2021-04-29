@@ -10,10 +10,9 @@ import torch
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
-from sklearn.metrics import f1_score, accuracy_score
+from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 from embviz.logger import EmbeddingSpaceLogger
-
-
+            
 DATASET = 'mdb'
 NUM_WORKERS = 0
 N_EPISODES = 100
@@ -78,7 +77,7 @@ def evaluate(exp_dir):
             # log the episode on the embedding space
             log_episode_space(embloggers[n_shot], episode, output, index)
 
-        results = pd.DataFrame(episode_metrics(outputs, tree))
+        results = pd.DataFrame(episode_metrics(outputs,  name=name, results_dir=results_dir, tree=tree))
         results['model'] = f'{name}'
         results['n_shot'] = n_shot
         results['n_class'] = N_CLASS
@@ -162,7 +161,7 @@ def idx2label(labels: torch.Tensor,  classlist: list):
     return [classlist[l] for l in labels]
 
 
-def episode_metrics(outputs: dict, tree: MusicTree = None):
+def episode_metrics(outputs: dict, name: str, results_dir, tree: MusicTree = None):
     """ 
     compute per-episode metrics, and return first and 
     second order statistics for the results
@@ -178,13 +177,13 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
             classlist = t['classlist']
             pred = idx2label(t['pred'], classlist)
             target = idx2label(t['target'], classlist)
-
+            tag = t['tag']
             # f1 micro
             results.append({
                 'episode_idx': index,
                 'metric': 'f1_micro',
                 'value': f1_score(target, pred, average='micro', labels=classlist),
-                'tag': t['tag'],
+                'tag': tag,
             })
 
             # f1 macro
@@ -192,7 +191,7 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
                 'episode_idx': index,
                 'metric': 'f1_macro',
                 'value': f1_score(target, pred, average='macro', labels=classlist),
-                'tag': t['tag'],
+                'tag': tag,
             })
 
             # raw episode accuracy
@@ -200,20 +199,26 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
                 'episode_idx': index,
                 'metric': 'epi-accuracy',
                 'value': accuracy_score(target, pred, normalize=True),
-                'tag': t['tag'],
+                'tag': tag,
             })
 
-            # TODO export the confusion matrix as a png don't use the function below
-            # mt.models.task.MetaTask.log_confusion_matrix(t, index)
+            # TODO Test conf mat
+            # creating the confusion matrix for this episode
+            conf_matrix = confusion_matrix(
+                target, pred, normalize='true')
+            fig = plot_confusion_matrix(conf_matrix, classlist)
+            fig.ax_.set_title(f'Episode {episode_idx} Tag {tag}')
+            # saving the confusion matrix to the results directory 
+            fig.savefig(results_dir / 'conf_matrices' / f'{name}-CFM-Episode{episode_idx}.jpeg')
 
-            if 'tree' not in t['tag']:
+            if 'tree' not in tag:
                 # track the highest least common ancestor
                 results.append({
                     'episode_idx': index,
                     'metric': 'hlca-mistake',
                     'value': np.mean([tree.hlca(p, tgt) for p, tgt in zip(pred, target)
                                       if p != tgt]),
-                    'tag': t['tag'],
+                    'tag': tag,
                 })
 
                 # making variables for hierachical precision and recall
@@ -227,7 +232,7 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
                     'episode_idx': index,
                     'metric': 'hierarchical-precision',
                     'value': hP,
-                    'tag': t['tag'],
+                    'tag': tag,
                 })
 
                 # tracking the hierarchical recall
@@ -235,7 +240,7 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
                     'episode_idx': index,
                     'metric': 'hierarchical-recall',
                     'value': hR,
-                    'tag': t['tag'],
+                    'tag': tag,
                 })
 
                 # tracking the hierachical f1
@@ -243,7 +248,7 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
                     'episode_idx': index,
                     'metric': 'hierarchical-f1',
                     'value': (2 * hP * hR)/(hP + hR),
-                    'tag': t['tag'],
+                    'tag': tag,
                 })
 
     return pd.DataFrame(results)
