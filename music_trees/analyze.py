@@ -128,7 +128,8 @@ def epi_below_base(df: pd.DataFrame, tag: str, metric: str):
                                         'n-shot': n_shot,
                                         'metric': metric,
                                         'based-val': based_val,
-                                        'model-val': compared_val
+                                        'model-val': compared_val,
+                                        'difference': based_val - compared_val
                                         })
     return pd.DataFrame(tracked_epis)
 
@@ -163,7 +164,8 @@ def epi_above_base(df:pd.DataFrame, tag:str, metric:str, take_top:int=3):
                                         'n-shot': n_shot,
                                         'metric': metric,
                                         'based-val': based_val,
-                                        'model-val': compared_val
+                                        'model-val': compared_val,
+                                        'difference': compared_val - based_val
                                         })
             # sorting this temp list by the compared models values in descending order 
             temp_tracked_epis = sorted(temp_tracked_epis, key=lambda tracked: tracked['model-val'], reverse=True)
