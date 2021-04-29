@@ -185,8 +185,8 @@ class MetaTask(pl.LightningModule):
                 self.log_confusion_matrix(task, stage)
                 self.text_log_task(task, stage)
 
-        if val_check:
-            self.visualize_embedding_space(output, stage)
+        # if val_check:
+        #     self.visualize_embedding_space(output, stage)
 
     def log_classification_task(self, task: dict, stage: str):
         """ log task metrics as scalar"""
