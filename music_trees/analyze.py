@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 from natsort import natsorted
 from scipy.stats import wilcoxon
 
+BASELINE_NAME = 'baseline'
 ANALYSES_DIR = mt.ROOT_DIR / 'analyses'
 
 ALL_COLORS = ["ff595e", "ffca3a", "8ac926", "1982c4", "6a4c93"]
