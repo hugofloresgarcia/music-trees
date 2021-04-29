@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def plot_confusion_matrix(cm, class_names):
+def plot_confusion_matrix(cm, class_names, title="Confusion Matrix"):
     """
     Returns a matplotlib figure containing the plotted confusion matrix.
 
@@ -24,7 +24,7 @@ def plot_confusion_matrix(cm, class_names):
     else:
         figure = plt.figure(figsize=(12, 12))
     plt.imshow(cm, cmap='viridis')
-    plt.title("Confusion matrix")
+    plt.title(title)
     plt.colorbar()
     tick_marks = np.arange(len(class_names))
     plt.xticks(tick_marks, class_names, rotation=65)

@@ -1,7 +1,9 @@
 from logging import log
 from typing import OrderedDict
+
 import music_trees as mt
 from music_trees.tree import MusicTree
+from music_trees.models.task import plot_confusion_matrix
 
 import glob
 from pathlib import Path
@@ -135,7 +137,7 @@ def log_episode_space(logger: EmbeddingSpaceLogger, episode: dict, output: dict,
                     target=labels, label=labels)
 
     logger.add_step(step_key=f'{episode_idx}', embeddings=embeddings, symbols=metatypes,
-                    metadata=metadata, title='meta space')
+                    metadata=metadata, title='meta space', labels=labels)
 
 
 def get_ckpt_path(exp_dir):
@@ -166,13 +168,19 @@ def episode_metrics(outputs: dict, name: str, results_dir, tree: MusicTree = Non
     compute per-episode metrics, and return first and 
     second order statistics for the results
     """
+    # create a folder for the confusion matrcies 
+    path = Path(results_dir / 'conf_matrices')
+    path.mkdir(exist_ok=True, parents=False)
 
     #  gather a concatenated list of all preds and targets
     task_tags = [t['tag'] for t in outputs[0]['tasks']]
     tasks = {t: [] for t in task_tags}
-
     results = []
     for index, epi in enumerate(outputs):
+        
+        path = Path(results_dir / 'conf_matrices' / f'{name}_episode_{index}')
+        path.mkdir(exist_ok=True, parents=False)
+
         for t in epi['tasks']:
             classlist = t['classlist']
             pred = idx2label(t['pred'], classlist)
@@ -202,14 +210,15 @@ def episode_metrics(outputs: dict, name: str, results_dir, tree: MusicTree = Non
                 'tag': tag,
             })
 
-            # TODO Test conf mat
+            # TODO Test conf mat    
             # creating the confusion matrix for this episode
             conf_matrix = confusion_matrix(
                 target, pred, normalize='true')
-            fig = plot_confusion_matrix(conf_matrix, classlist)
-            fig.ax_.set_title(f'Episode {episode_idx} Tag {tag}')
+            fig = plot_confusion_matrix(conf_matrix, classlist, title=f'Episode {index} {name} {tag}')
+            
             # saving the confusion matrix to the results directory 
-            fig.savefig(results_dir / 'conf_matrices' / f'{name}-CFM-Episode{episode_idx}.jpeg')
+            dir_path = results_dir / 'conf_matrices' /f'{name}_episode_{index}'/f'conf-mat-{name}-tag{tag}-episode-{index}.jpeg'
+            fig.savefig(dir_path)
 
             if 'tree' not in tag:
                 # track the highest least common ancestor
