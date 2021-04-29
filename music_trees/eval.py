@@ -16,7 +16,7 @@ from embviz.logger import EmbeddingSpaceLogger
 
 DATASET = 'mdb'
 NUM_WORKERS = 0
-N_EPISODES = 5
+N_EPISODES = 100
 N_CLASS = 12
 N_QUERY = 2 * 60  # (2 minutes of audio per class)
 N_SHOT = tuple(reversed((1, 2, 4, 8, 16, 32)))
@@ -40,7 +40,7 @@ def evaluate(exp_dir):
 
     # create embedding space loggers for each test condition
     embloggers = OrderedDict(
-        (n, EmbeddingSpaceLogger(results_dir / f'space-n_shot={n}')) for n in N_SHOT)
+        (n, EmbeddingSpaceLogger(str(results_dir / f'space-n_shot={n}'))) for n in N_SHOT)
 
     # load the model from checkpoint and move to tree
     model = load_model_from_ckpt(ckpt_path)
@@ -115,7 +115,7 @@ def log_episode_space(logger: EmbeddingSpaceLogger, episode: dict, output: dict,
     preds = support_labels + [gc(i) for i in task['pred']]
     labels = support_labels + [gc(i) for i in task['target']]
 
-    metatypes = ['support'] * n_support + ['query'] * n_query
+    metatypes = ['support'] * n_support
     for p, tr in zip(preds[:n_support], labels[:n_support]):
         metatype = 'query-correct' if p == tr else 'query-incorrect'
         metatypes.append(metatype)
@@ -217,8 +217,10 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
                 })
 
                 # making variables for hierachical precision and recall
-                hP = np.mean([tree.hierarchical_precision(p, tgt) for p, tgt in zip(pred, target)])
-                hR = np.mean([tree.hierarchical_recall(p, tgt) for p, tgt in zip(pred, target)])
+                hP = np.mean([tree.hierarchical_precision(p, tgt)
+                             for p, tgt in zip(pred, target)])
+                hR = np.mean([tree.hierarchical_recall(p, tgt)
+                             for p, tgt in zip(pred, target)])
 
                 # tracking the hierarchical precision
                 results.append({
@@ -240,7 +242,7 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
                 results.append({
                     'episode_idx': index,
                     'metric': 'hierarchical-f1',
-                    'value': (2 * hP * hR)/(hP + hR)),
+                    'value': (2 * hP * hR)/(hP + hR),
                     'tag': t['tag'],
                 })
 
