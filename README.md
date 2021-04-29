@@ -103,11 +103,11 @@ The code is structured so that the model only receives one episode (which can be
 
 ### Evaluate
 
-Both name and version are required here, since we're loading a previously trained model. 
+Perform evaluation on a model. Make sure to pass the path to the run that you wish to evaluate. 
 
 To evaluate a model:
 ```bash
-export CUDA_VISIBLE_DEVICES='0' && python music_trees/eval.py --exp_dir <PATH_TO_RUN>
+export CUDA_VISIBLE_DEVICES='0' && python music_trees/eval.py --exp_dir <PATH_TO_RUN/version_X>
 ```
 
 ### Hyperparameter Search
@@ -120,6 +120,14 @@ export CUDA_VISIBLE_DEVICES=0,1 && python music_trees/search.py --name <CONFIG_N
 ```
 
 where `num_samples` is the number of trials to run in the search is `gpu_capacity` is an estimate of the amount of GPU memory (as a fraction) that each run will take. 
+
+### Analyze
+
+To run a model comparison, generate figures, etc. use analyze.py:
+
+```bash
+python music_trees/analyze.py <PATH_TO_RESULTS> <OUTPUT_NAME>
+```
 
 ### Infer
 
