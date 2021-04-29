@@ -1,36 +1,52 @@
+from logging import log
+from typing import OrderedDict
 import music_trees as mt
 from music_trees.tree import MusicTree
 
 import glob
+from pathlib import Path
 
 import torch
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from sklearn.metrics import f1_score, accuracy_score
+from embviz.logger import EmbeddingSpaceLogger
 
 
 DATASET = 'mdb'
 NUM_WORKERS = 0
-N_EPISODES = 100
+N_EPISODES = 5
 N_CLASS = 12
 N_QUERY = 2 * 60  # (2 minutes of audio per class)
 N_SHOT = tuple(reversed((1, 2, 4, 8, 16, 32)))
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-def evaluate(name: str, version: int):
-    exp_dir = mt.train.get_exp_dir(name, version)
+def evaluate(exp_dir):
+    exp_dir = Path(exp_dir)
     assert exp_dir.exists()
-
-    output_dir = exp_dir / 'tests'
-    output_dir.mkdir(exist_ok=True)
-
+    # load the checkpoint
     ckpt_path = get_ckpt_path(exp_dir)
     ckpt = torch.load(ckpt_path)
+
+    # set run's name
+    name = ckpt['hyper_parameters']['args'].name
+
+    # define an output dir
+    results_dir = results_path = mt.RESULTS_DIR / \
+        DATASET / f'{name}'
+    results_dir.mkdir(parents=True, exist_ok=True)
+
+    # create embedding space loggers for each test condition
+    embloggers = OrderedDict(
+        (n, EmbeddingSpaceLogger(results_dir / f'space-n_shot={n}')) for n in N_SHOT)
+
+    # load the model from checkpoint and move to tree
     model = load_model_from_ckpt(ckpt_path)
     model = model.to(DEVICE)
 
+    # get the model's tree
     tree = model.model.tree
 
     # setup transforms
@@ -54,20 +70,23 @@ def evaluate(name: str, version: int):
             episode = batch2cuda(episode)
             # track the class list for each episode
             epi_classes.append(episode['classlist'])
+
             # output should have all predictions and targets, etc.
             output = model.eval_step(episode, index)
             outputs.append(output)
 
+            # log the episode on the embedding space
+            log_episode_space(embloggers[n_shot], episode, output, index)
+
         results = pd.DataFrame(episode_metrics(outputs, tree))
-        results['model'] = f'{name}_v{version}'
+        results['model'] = f'{name}'
         results['n_shot'] = n_shot
         results['n_class'] = N_CLASS
         all_results.append(results)
 
         all_results_df = pd.concat(all_results)
 
-        results_path = mt.RESULTS_DIR / DATASET / f'{name}-v{version}.csv'
-        results_path.parent.mkdir(exist_ok=True, parents=True)
+        results_path = results_dir / f'{name}.csv'
 
         for key, val in vars(ckpt['hyper_parameters']['args']).items():
             if key in ('model', 'n_shot', 'n_class'):
@@ -75,6 +94,49 @@ def evaluate(name: str, version: int):
             all_results_df[key] = val
         all_results_df.to_csv(results_path)
         print(all_results_df)
+
+
+def log_episode_space(logger: EmbeddingSpaceLogger, episode: dict, output: dict,
+                      episode_idx):
+    task = [t for t in output['tasks'] if 'tree' not in t['tag']][0]
+    tree_tasks = {t['tag']: t for t in output['tasks'] if 'tree' in t['tag']}
+
+    records = output['records']
+    n_support = output['n_shot'] * output['n_class']
+    n_query = output['n_query'] * output['n_class']
+
+    # class index to class name
+    def gc(i): return output['classlist'][i]
+
+    embeddings = [e for e in task['support_embedding']] + \
+        [e for e in task['query_embedding']]
+
+    support_labels = [r['label'] for r in output['records']][:n_support]
+    preds = support_labels + [gc(i) for i in task['pred']]
+    labels = support_labels + [gc(i) for i in task['target']]
+
+    metatypes = ['support'] * n_support + ['query'] * n_query
+    for p, tr in zip(preds[:n_support], labels[:n_support]):
+        metatype = 'query-correct' if p == tr else 'query-incorrect'
+        metatypes.append(metatype)
+
+    audio_paths = [r['audio_path'] for r in records]
+
+    # also visualize the prototypes, though without audio
+    for p_emb, label in zip(task['prototype_embedding'], task['classlist']):
+        embeddings.append(p_emb)
+        labels.append(label)
+        preds.append(label)
+        metatypes.append('proto')
+        audio_paths.append(None)
+
+    embeddings = torch.stack(embeddings).detach().cpu().numpy()
+
+    metadata = dict(audio_path=audio_paths, pred=preds,
+                    target=labels, label=labels)
+
+    logger.add_step(step_key=f'{episode_idx}', embeddings=embeddings, symbols=metatypes,
+                    metadata=metadata, title='meta space')
 
 
 def get_ckpt_path(exp_dir):
@@ -179,10 +241,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     # add training script arguments
-    parser.add_argument('--name', type=str, required=True,
-                        help='name of the experiment')
-    parser.add_argument('--version', type=int, required=True,
-                        help='version.')
+    parser.add_argument('--exp_dir', type=str, required=True,
+                        help='experiment directory')
 
     args = parser.parse_args()
     evaluate(**vars(args))

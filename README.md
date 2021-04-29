@@ -107,7 +107,7 @@ Both name and version are required here, since we're loading a previously traine
 
 To evaluate a model:
 ```bash
-export CUDA_VISIBLE_DEVICES='0' && python music_trees/eval.py --name <NAME> --version <VERSION>
+export CUDA_VISIBLE_DEVICES='0' && python music_trees/eval.py --exp_dir <PATH_TO_RUN>
 ```
 
 ### Hyperparameter Search
