@@ -202,6 +202,7 @@ def episode_metrics(outputs: dict, name: str, results_dir, tree: MusicTree = Non
                 'tag': tag,
             })
 
+            # TODO Test conf mat
             # creating the confusion matrix for this episode
             conf_matrix = confusion_matrix(
                 target, pred, normalize='true')
