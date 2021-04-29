@@ -52,7 +52,7 @@ def significance(df: pd.DataFrame, dv: str, iv: str, cond: str):
 
 
 def bar_with_error(df: pd.DataFrame, dv: str, iv: str,
-                   cond: str, title: str = None) -> plt.figure:
+                   cond: str, title: str = None, ylabel: str = None) -> plt.figure:
     """
     dv --> dependent variable
     iv --> independent variable
@@ -85,7 +85,7 @@ def bar_with_error(df: pd.DataFrame, dv: str, iv: str,
                 color='#'+ALL_COLORS[idx], edgecolor='white', label=tr)
 
     plt.xlabel(cond)
-    plt.ylabel('value')
+    plt.ylabel(ylabel)
     plt.xticks(ticks=[i + bar_width for i in range(len(all_conds))],
                labels=all_conds)
     plt.title(title)
@@ -276,7 +276,7 @@ def analyze(df: pd.DataFrame, name: str):
             cond = 'n_shot'
 
             errorbar = bar_with_error(subset, dv=dv, iv=iv,
-                                      cond=cond, title=metric)
+                                      cond=cond, title=name, ylabel=metric)
             errorbar.savefig(subdir / f'{metric}.png')
 
             sig_df = significance(subset, dv=dv, iv=iv, cond=cond)
