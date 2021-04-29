@@ -216,11 +216,15 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
                     'tag': t['tag'],
                 })
 
+                # making variables for hierachical precision and recall
+                hP = np.mean([tree.hierarchical_precision(p, tgt) for p, tgt in zip(pred, target)])
+                hR = np.mean([tree.hierarchical_recall(p, tgt) for p, tgt in zip(pred, target)])
+
                 # tracking the hierarchical precision
                 results.append({
                     'episode_idx': index,
                     'metric': 'hierarchical-precision',
-                    'value': np.mean([tree.hierarchical_precision(p, tgt) for p, tgt in zip(pred, target)]),
+                    'value': hP,
                     'tag': t['tag'],
                 })
 
@@ -228,10 +232,18 @@ def episode_metrics(outputs: dict, tree: MusicTree = None):
                 results.append({
                     'episode_idx': index,
                     'metric': 'hierarchical-recall',
-                    'value': np.mean([tree.hierarchical_recall(p, tgt) for p, tgt in zip(pred, target)]),
+                    'value': hR,
                     'tag': t['tag'],
                 })
-                
+
+                # tracking the hierachical f1
+                results.append({
+                    'episode_idx': index,
+                    'metric': 'hierarchical-f1',
+                    'value': (2 * hP * hR)/(hP + hR)),
+                    'tag': t['tag'],
+                })
+
     return pd.DataFrame(results)
 
 
