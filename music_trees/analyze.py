@@ -132,6 +132,50 @@ def epi_below_base(df: pd.DataFrame, tag: str, metric: str):
                                         })
     return pd.DataFrame(tracked_epis)
 
+def epi_above_base(df:pd.DataFrame, tag:str, metric:str, take_top:int=3):
+    # get all possible trials and n-shots
+    all_trials = df['name'].unique()
+    shots = np.sort(df['n_shot'].unique())
+    
+    # track the episodes where the compared model does better than the baseline
+    tracked_epis = []
+    
+    for n_shot in shots:
+        # build baseline subset
+        baseline = df[(df.n_shot == n_shot) & (df.name == BASELINE_NAME)]
+        
+        for trial in all_trials:
+            # model to be compared
+            compared_model = df[(df.n_shot == n_shot) & (df.name == trial)]
+            temp_tracked_epis = []
+            for episode in compared_model.episode_idx.unique():
+                # compared model's value for the given metric
+                compared_val = compared_model[compared_model.episode_idx == episode].value.values[0]
+                # base model value for the given metric
+                based_val = baseline[baseline.episode_idx == episode].value.values[0]
+                
+                if based_val < compared_val:
+                    temp_tracked_epis.append({
+                                        'episode': episode,
+                                        'tag': tag,
+                                        'model-name':compared_model.name.values[0],
+                                        'baseline': BASELINE_NAME,
+                                        'n-shot': n_shot,
+                                        'metric': metric,
+                                        'based-val': based_val,
+                                        'model-val': compared_val
+                                        })
+            # sorting this temp list by the compared models values in descending order 
+            temp_tracked_epis = sorted(temp_tracked_epis, key=lambda tracked: tracked['model-val'], reverse=True)
+            
+            # using enumerate here instead of slicing for compact error checking
+            for i, tracked_epi in enumerate(temp_tracked_epis):
+                if i < take_top:
+                    tracked_epis.append(tracked_epi)
+                else:
+                    break
+                    
+    return pd.DataFrame(tracked_epis)
 
 def barplot_annotate_brackets(num1, num2, data, center, height,
                               yerr=None, dh=.05, barh=.05, fs=None, maxasterix=None):
@@ -229,6 +273,9 @@ def analyze(df: pd.DataFrame, name: str):
 
             sig_df = significance(subset, dv=dv, iv=iv, cond=cond)
             sig_df.to_csv(subdir / f'significance-{metric}.csv')
+
+            epi_above_df = epi_above_base(subset, tag, metric)
+            epi_above_df.to_csv(subdir / f'episodes-above-base-{metric}.csv')
 
             epi_below_df = epi_below_base(subset, tag, metric)
             epi_below_df.to_csv(subdir / f'episodes-below-base-{metric}.csv')
