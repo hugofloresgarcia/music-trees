@@ -96,6 +96,42 @@ def bar_with_error(df: pd.DataFrame, dv: str, iv: str,
     return fig
 
 
+def epi_below_base(df: pd.DataFrame, tag: str, metric: str):
+    # get all possible trials and n-shots
+    all_trials = df['name'].unique()
+    shots = np.sort(df['n_shot'].unique())
+
+    # track the episodes where the baseline does better than the compared model
+    tracked_epis = []
+
+    for n_shot in shots:
+        # build baseline subset
+        baseline = df[(df.n_shot == n_shot) & (df.name == BASELINE_NAME)]
+
+        for trial in all_trials:
+            # model to be compared
+            compared_model = df[(df.n_shot == n_shot) & (df.name == trial)]
+            for episode in compared_model.episode_idx.unique():
+                # compared model's value for the given metric
+                compared_val = compared_model[compared_model.episode_idx ==
+                                              episode].value.values[0]
+                # base model value for the given metric
+                based_val = baseline[baseline.episode_idx ==
+                                     episode].value.values[0]
+                if based_val > compared_val:
+                    tracked_epis.append({
+                                        'episode': episode,
+                                        'tag': tag,
+                                        'model-name': compared_model.name.values[0],
+                                        'baseline': BASELINE_NAME,
+                                        'n-shot': n_shot,
+                                        'metric': metric,
+                                        'based-val': based_val,
+                                        'model-val': compared_val
+                                        })
+    return pd.DataFrame(tracked_epis)
+
+
 def barplot_annotate_brackets(num1, num2, data, center, height,
                               yerr=None, dh=.05, barh=.05, fs=None, maxasterix=None):
     """ 
@@ -193,7 +229,8 @@ def analyze(df: pd.DataFrame, name: str):
             sig_df = significance(subset, dv=dv, iv=iv, cond=cond)
             sig_df.to_csv(subdir / f'significance-{metric}.csv')
 
-    breakpoint()
+            epi_below_df = epi_below_base(subset, tag, metric)
+            epi_below_df.to_csv(subdir / f'episodes-below-base-{metric}.csv')
 
     raise NotImplementedError
 
@@ -208,7 +245,6 @@ def analyze_folder(path_to_results: str, name: str):
         str(Path(path_to_results) / '**/*.csv'), recursive=True)
     df = pd.concat([pd.read_csv(fp) for fp in filepaths], ignore_index=True)
     df = df.drop_duplicates()
-
     return analyze(df, name)
 
 
