@@ -14,7 +14,7 @@ DATA_DIR = ROOT_DIR / 'data'
 RUNS_DIR = ROOT_DIR / 'runs'
 RESULTS_DIR = ROOT_DIR / 'results'
 
-TQDM_DISABLE = True
+TQDM_DISABLE = False
 
 SEED = 42
 pl.seed_everything(SEED)

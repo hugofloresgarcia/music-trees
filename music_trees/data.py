@@ -101,7 +101,7 @@ class MetaDataset(torch.utils.data.Dataset):
         cache_name = repr(self.audio_tfm)
         self.cache_root = mt.CACHE_DIR / name / cache_name
         self.cache_root.mkdir(exist_ok=True, parents=True)
-        self.cache_dataset()
+        # self.cache_dataset()
 
         # generally, we want to create new episodes
         # on the fly

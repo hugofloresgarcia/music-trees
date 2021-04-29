@@ -2,6 +2,7 @@
 import medleydb as mdb
 import logging
 import music_trees as mt
+import librosa
 logging.basicConfig(level=logging.ERROR)  # override the config from root
 
 
@@ -69,6 +70,10 @@ def load_all_filepaths():
         for path in paths:
             records.append({'path': path, 'label': instrument})
 
+    dur = 0
+    for record in records:
+        dur += librosa.core.get_duration(filename=record['path'])
+    breakpoint()
     return records
 
 
