@@ -116,7 +116,7 @@ def log_episode_space(logger: EmbeddingSpaceLogger, episode: dict, output: dict,
     labels = support_labels + [gc(i) for i in task['target']]
 
     metatypes = ['support'] * n_support
-    for p, tr in zip(preds[:n_support], labels[:n_support]):
+    for p, tr in zip(preds[n_support:], labels[n_support:]):
         metatype = 'query-correct' if p == tr else 'query-incorrect'
         metatypes.append(metatype)
 
