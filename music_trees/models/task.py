@@ -185,8 +185,25 @@ class MetaTask(pl.LightningModule):
                 self.log_confusion_matrix(task, stage)
                 self.text_log_task(task, stage)
 
+        if 'loss-weights' in output:
+            self.log_loss_weights(output)
         # if val_check:
         #     self.visualize_embedding_space(output, stage)
+
+    def log_loss_weights(self, output):
+        import matplotlib.pyplot as plt
+
+        vec = torch.nn.functional.softmax(output['loss-weights'], dim=0).cpu()
+
+        plt.stem(np.arange(len(vec)), vec.numpy())
+        plt.title('loss weights')
+        plt.xlabel('height')
+        plt.ylabel('loss weight')
+        plt.tight_layout()
+        fig = plt.gcf()
+        plt.close()
+
+        self.logger.experiment.add_figure('loss-alpha', fig, self.global_step)
 
     def log_classification_task(self, task: dict, stage: str):
         """ log task metrics as scalar"""
@@ -199,8 +216,6 @@ class MetaTask(pl.LightningModule):
                  accuracy(task['pred'], task['target']))
         self.log(f'f1/{task["tag"]}/{stage}', f1(task['pred'], task['target'],
                  num_classes=num_classes, average='weighted'))
-        self.log(f'loss-weighted/{task["tag"]}/{stage}',
-                 task['loss'] * task['loss_weight'])
         self.log(f'loss-unweighted/{task["tag"]}/{stage}',
                  task['loss'])
 

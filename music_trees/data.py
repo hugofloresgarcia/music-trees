@@ -122,13 +122,9 @@ class MetaDataset(torch.utils.data.Dataset):
 
         cached_files = self.root / f'cached_files-{partition}.yaml'
 
-        if cached_files.exists() and partition == 'train':
-            files = mt.utils.data.load_entry(cached_files, format='yaml')
-        else:
-            logging.info('loading files')
-            files = {classname: mt.utils.data.glob_all_metadata_entries(
-                self.root / classname, pattern='**/*.json') for classname in classlist}
-            mt.utils.data.save_entry(files, cached_files, format='yaml')
+        logging.info('loading files')
+        files = {classname: mt.utils.data.glob_all_metadata_entries(
+            self.root / classname, pattern='**/*.json') for classname in classlist}
 
         # sort by key
         files = OrderedDict(sorted(files.items(), key=lambda x: x[0]))

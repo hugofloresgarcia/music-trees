@@ -65,11 +65,11 @@ class HierarchicalProtoNet(nn.Module):
         self.tree.show()
 
         # trainable hierarchical loss vector
-        self.hloss_vector = nn.Parameter(
-            torch.ones(self.height), requires_grad=True)
-
-        self.loss_alpha = args.loss_alpha
-        self.loss_weight_fn = args.loss_weight_fn
+        if args.loss_weight_fn == "exp":
+            self.loss_weights = torch.exp(
+                -args.loss_alpha * torch.arange(self.height))
+        else:
+            raise ValueError
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -150,7 +150,6 @@ class HierarchicalProtoNet(nn.Module):
         dists = dists[0]
 
         metatask = {
-            'is_meta': True,
             'classlist': episode['classlist'],
             'distances': -dists,
             'support_embedding': x_s,
@@ -251,23 +250,15 @@ class HierarchicalProtoNet(nn.Module):
         loss = F.cross_entropy(dists, target)
 
         metatask['target'] = target
-        metatask['loss'] = loss
         metatask['pred'] = torch.argmax(dists, dim=-1, keepdim=False)
         metatask['loss'] = loss
-        metatask['loss_weight'] = self.call_loss_weight_fn(
-            self.loss_alpha, 0, self.loss_weight_fn).type_as(loss)
+        metatask['include_in_loss'] = True
+        metatask['loss_height'] = 0
         return metatask
 
-    def call_loss_weight_fn(self, alpha: float, height: int, fn: str):
-        if fn == "exp":
-            # exponentially decaying weights
-            return torch.exp(-torch.tensor(alpha*height).float())
-        else:
-            raise ValueError(f'incorrect loss weight fn name: {fn}')
-
     def compute_ancestor_losses(self, episode: dict, metatask: dict):
-        """ 
-        calculates multitask meta losses, 
+        """
+        calculates multitask meta losses,
         given a metatask dict which contains:
             prototype_embedding: the leaf node prototypes
             classlist: list of leaf node classnames
@@ -304,10 +295,7 @@ class HierarchicalProtoNet(nn.Module):
             ancestor_dists = ancestor_dists.squeeze(0)
 
             loss = F.cross_entropy(-ancestor_dists, ancestor_targets.view(-1))
-            loss_weight = self.call_loss_weight_fn(self.loss_alpha, height,  self.loss_weight_fn).type_as(
-                loss) if (total_height-height) <= self.height else 0
             ancestor_task = {
-                'is_meta': True,
                 'classlist': ancestor_classlist,
                 'label_dict': c2a,
                 'distances': -ancestor_dists,
@@ -318,17 +306,15 @@ class HierarchicalProtoNet(nn.Module):
                 'target': ancestor_targets,
                 'tag': f'prototree-h{height}',
                 'loss': loss,
-                'loss_weight': loss_weight
+                'loss_height':  height - self.height + 1,
+                'include_in_loss': (total_height-height) < self.height
             }
-
-            # to keep the coarse-to-fine scheme,
-            # insert the ancestor task at the beginning of the list
-            ancestor_metatasks.insert(0, ancestor_task)
+            ancestor_metatasks.append(ancestor_task)
 
         return ancestor_metatasks
 
     def compute_losses(self, episode: dict, output: dict):
-        """ 
+        """
         main entry point. calculates both the leaf losses
         and ancestor losses
         """
@@ -337,17 +323,15 @@ class HierarchicalProtoNet(nn.Module):
 
         leaf_task = self.compute_leaf_loss(episode, input_task)
         ancestor_tasks = self.compute_ancestor_losses(episode, input_task)
+        metatasks = [leaf_task] + ancestor_tasks
 
-        # weigh the ancestor losses by a trainable vector, but not the leaf one (that is the one we wish to get good at)
-        ancestor_losses = torch.stack([t['loss'] for t in ancestor_tasks])
-        breakpoint()
-        print(F.softmax(self.hloss_vector))
-
-        output['loss'] = leaf_task['loss'] + \
-            F.softmax(self.hloss_vector) * ancestor_losses
+        loss_vec = torch.stack([t['loss']
+                                for t in metatasks if t['include_in_loss']])
+        output['loss'] = torch.sum(
+            self.loss_weights.type_as(loss_vec) * loss_vec)
 
         # insert metatasks in ascending order
-        metatasks = [leaf_task] + ancestor_tasks
-        output['tasks'] = metatasks\
+        output['tasks'] = metatasks
+        output['loss-weights'] = self.loss_weights.detach().cpu()
 
         return output

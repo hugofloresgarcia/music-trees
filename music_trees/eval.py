@@ -14,7 +14,7 @@ import pandas as pd
 from tqdm import tqdm
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 from embviz.logger import EmbeddingSpaceLogger
-            
+
 DATASET = 'mdb'
 NUM_WORKERS = 0
 N_EPISODES = 100
@@ -79,7 +79,8 @@ def evaluate(exp_dir):
             # log the episode on the embedding space
             log_episode_space(embloggers[n_shot], episode, output, index)
 
-        results = pd.DataFrame(episode_metrics(outputs,  name=name, results_dir=results_dir, tree=tree))
+        results = pd.DataFrame(episode_metrics(
+            outputs,  name=name, results_dir=results_dir, tree=tree, n_shot=n_shot))
         results['model'] = f'{name}'
         results['n_shot'] = n_shot
         results['n_class'] = N_CLASS
@@ -163,24 +164,18 @@ def idx2label(labels: torch.Tensor,  classlist: list):
     return [classlist[l] for l in labels]
 
 
-def episode_metrics(outputs: dict, name: str, results_dir, tree: MusicTree = None):
-    """ 
-    compute per-episode metrics, and return first and 
+def episode_metrics(outputs: dict, name: str, results_dir,
+                    tree: MusicTree = None, n_shot=None):
+    """
+    compute per-episode metrics, and return first and
     second order statistics for the results
     """
-    # create a folder for the confusion matrcies 
-    path = Path(results_dir / 'conf_matrices')
-    path.mkdir(exist_ok=True, parents=False)
 
     #  gather a concatenated list of all preds and targets
     task_tags = [t['tag'] for t in outputs[0]['tasks']]
     tasks = {t: [] for t in task_tags}
     results = []
     for index, epi in enumerate(outputs):
-        
-        path = Path(results_dir / 'conf_matrices' / f'{name}_episode_{index}')
-        path.mkdir(exist_ok=True, parents=False)
-
         for t in epi['tasks']:
             classlist = t['classlist']
             pred = idx2label(t['pred'], classlist)
@@ -213,11 +208,15 @@ def episode_metrics(outputs: dict, name: str, results_dir, tree: MusicTree = Non
             # creating the confusion matrix for this episode
             conf_matrix = confusion_matrix(
                 target, pred, normalize='true')
-            fig = plot_confusion_matrix(conf_matrix, classlist, title=f'Episode {index} {name} {tag}')
-            
-            # saving the confusion matrix to the results directory 
-            dir_path = results_dir / 'conf_matrices' /f'{name}_episode_{index}'/f'conf-mat-{name}-tag{tag}-episode-{index}.jpeg'
-            fig.savefig(dir_path)
+            fig = plot_confusion_matrix(
+                conf_matrix, classlist, title=f'Episode {index} task: {tag}')
+
+            conf_matrix_path = results_dir / \
+                'conf_matrices' / \
+                f'n_shot={n_shot}' / f'{tag}' / f'{index}'
+            conf_matrix_path.parent.mkdir(exist_ok=True, parents=True)
+
+            fig.savefig(conf_matrix_path)
 
             if 'tree' not in tag:
                 # track the highest least common ancestor
@@ -231,9 +230,9 @@ def episode_metrics(outputs: dict, name: str, results_dir, tree: MusicTree = Non
 
                 # making variables for hierachical precision and recall
                 hP = np.mean([tree.hierarchical_precision(p, tgt)
-                             for p, tgt in zip(pred, target)])
+                              for p, tgt in zip(pred, target)])
                 hR = np.mean([tree.hierarchical_recall(p, tgt)
-                             for p, tgt in zip(pred, target)])
+                              for p, tgt in zip(pred, target)])
 
                 # tracking the hierarchical precision
                 results.append({
