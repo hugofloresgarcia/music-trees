@@ -195,7 +195,8 @@ class MetaTask(pl.LightningModule):
         import matplotlib.pyplot as plt
         if not len(output['loss-weights']) > 0:
             return
-        vec = torch.nn.functional.softmax(output['loss-weights'], dim=0).cpu()
+        # vec = torch.nn.functional.softmax(output['loss-weights'], dim=0).cpu()
+        vec = output['loss-weights'].cpu()
 
         plt.stem(np.arange(len(vec)), vec.numpy())
         plt.title('loss weights')

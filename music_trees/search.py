@@ -43,6 +43,11 @@ CONFIGS = {
         'height': 4,
         'loss_alpha': tune.grid_search([1, 0.5, 0.25, 0.0125, 0, -0.0125, -0.125, ]),
     },
+    'loss-interp-avg': {
+        'loss_weight_fn': 'inter-avg',
+        'height': 4,
+        'loss_alpha': tune.grid_search([0.1, 0.25, 0.5, 0.75, 0.9]),
+    },
     'taxonomies': {
         'height': 2,
         'taxonomy_name': tune.grid_search(['random-taxonomy', 'origin-taxonomy', 'deeper-mdb'])

@@ -64,16 +64,8 @@ class HierarchicalProtoNet(nn.Module):
         self.tree.even_depth()
         self.tree.show()
 
-        # trainable hierarchical loss vector
-        if args.loss_weight_fn == "exp":
-            self.loss_weights = torch.exp(
-                -args.loss_alpha * torch.arange(self.height))
-        elif args.loss_weight_fn == "exp-leafheavy":
-            self.loss_weights = torch.exp(
-                args.loss_alpha * torch.arange(self.height-1, -1, -1))
-            self.loss_weights[0] = torch.tensor(1)
-        else:
-            raise ValueError
+        self.loss_weight_fn = args.loss_weight_fn
+        self.loss_alpha = args.loss_alpha
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -147,7 +139,7 @@ class HierarchicalProtoNet(nn.Module):
         # output should be shape (b, q, c)
         # so that the row vectors are the logits for the classes
         # for each query, in the batch
-        dists = torch.cdist(x_q.unsqueeze(0), x_p.unsqueeze(0), p=2)
+        dists = torch.cdist(x_q.unsqueeze(0), x_p.unsqueeze(0), p=2) ** 2
 
         # remove batch dim for dists
         assert dists.shape[0] == 1
@@ -293,7 +285,7 @@ class HierarchicalProtoNet(nn.Module):
             # compute query-prototype distances
             # when using cdist, make sure to unsqueeze a batch dimension
             ancestor_dists = torch.cdist(
-                query.unsqueeze(0), ancestor_protos.unsqueeze(0), p=2)
+                query.unsqueeze(0), ancestor_protos.unsqueeze(0), p=2) ** 2
 
             # remember to remove batch dim from output distances
             ancestor_dists = ancestor_dists.squeeze(0)
@@ -332,8 +324,33 @@ class HierarchicalProtoNet(nn.Module):
         loss_vec = torch.stack([t['loss']
                                 for t in metatasks if t['include_in_loss']])
         if self.height > 0:
-            output['loss'] = torch.sum(
-                self.loss_weights.type_as(loss_vec) * loss_vec)
+
+            if args.loss_weight_fn == "exp":
+                self.loss_weights = torch.exp(
+                    -self.loss_alpha * torch.arange(self.height))
+
+                output['loss'] = torch.sum(
+                    self.loss_weights.type_as(loss_vec) * loss_vec)
+
+            elif self.loss_weight_fn == "exp-leafheavy":
+                self.loss_weights = torch.exp(
+                    self.loss_alpha * torch.arange(self.height-1, -1, -1))
+                self.loss_weights[0] = torch.tensor(1)
+
+                output['loss'] = torch.sum(
+                    self.loss_weights.type_as(loss_vec) * loss_vec)
+
+            elif self.loss_weight_fn == "interp-avg":
+                self.loss_weights = torch.ones(
+                    self.height) / len(self.height) * (1 - self.loss_alpha)
+                self.loss_weights[0] = 1 * self.loss_alpha
+
+                output['loss'] = self.loss_alpha * loss_vec[0] + \
+                    (1 - self.loss_alpha) * torch.mean(self.loss_vec[1:])
+
+            else:
+                raise ValueError
+
         else:
             output['loss'] = metatasks[0]['loss']
 
