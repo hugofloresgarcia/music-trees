@@ -71,7 +71,7 @@ class HierarchicalProtoNet(nn.Module):
         elif args.loss_weight_fn == "exp-leafheavy":
             self.loss_weights = torch.exp(
                 args.loss_alpha * torch.arange(self.height-1, -1, -1))
-            self.loss_weights[0] = 1
+            self.loss_weights[0] = torch.tensor(1)
         else:
             raise ValueError
 

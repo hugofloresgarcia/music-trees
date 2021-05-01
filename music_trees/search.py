@@ -41,7 +41,7 @@ CONFIGS = {
     'loss-exp-h4': {
         'loss_weight_fn': 'exp',
         'height': 4,
-        'loss_alpha': tune.grid_search([1, 0.5, 0.25, 0.125, 0.0125, 0, -0.0125, -0.125, -0.25, -0.5, -1]),
+        'loss_alpha': tune.grid_search([1, 0.5, 0.25, 0.0125, 0, -0.0125, -0.125, ]),
     },
     'taxonomies': {
         'height': 2,
