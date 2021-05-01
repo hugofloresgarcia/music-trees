@@ -68,6 +68,10 @@ class HierarchicalProtoNet(nn.Module):
         if args.loss_weight_fn == "exp":
             self.loss_weights = torch.exp(
                 -args.loss_alpha * torch.arange(self.height))
+        elif args.loss_weight_fn == "exp-leafheavy":
+            self.loss_weights = torch.exp(
+                args.loss_alpha * torch.arange(self.height-1, -1, -1))
+            self.loss_weights[0] = 1
         else:
             raise ValueError
 
@@ -327,8 +331,11 @@ class HierarchicalProtoNet(nn.Module):
 
         loss_vec = torch.stack([t['loss']
                                 for t in metatasks if t['include_in_loss']])
-        output['loss'] = torch.sum(
-            self.loss_weights.type_as(loss_vec) * loss_vec)
+        if self.height > 0:
+            output['loss'] = torch.sum(
+                self.loss_weights.type_as(loss_vec) * loss_vec)
+        else:
+            output['loss'] = metatasks[0]['loss']
 
         # insert metatasks in ascending order
         output['tasks'] = metatasks

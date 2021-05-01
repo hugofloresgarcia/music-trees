@@ -26,20 +26,22 @@ CONFIGS = {
     'data-aug': {
         'dataset': tune.grid_search(['mdb-aug', 'mdb']),
     },
-    'tree-height-v3': {
-        'height': tune.grid_search(list(range(6))),
-    },
-    'tree-height-v2': {
-        'loss_alpha': 0.25,
-        'height': tune.grid_search([3, 4, 5]),
+    'height': {
+        'loss_alpha': NotImplemented,
+        'height': tune.grid_search([0, 2, 3, 4, 5]),
     },
     'd_root': {
         'd_root': tune.grid_search([64, 128, 256, 512]),
     },
     'loss-exp': {
         'loss_weight_fn': 'exp',
-        'height': 2,
-        'loss_alpha': tune.grid_search(list(np.arange(-2, 2.5, 0.5))),
+        'height': 5,
+        'loss_alpha': tune.grid_search([1, 0.5, 0.25, 0.125, 0.0125, 0, -0.0125, -0.125, -0.25, -0.5, -1]),
+    },
+    'loss-exp': {
+        'loss_weight_fn': 'exp',
+        'height': 4,
+        'loss_alpha': tune.grid_search([1, 0.5, 0.25, 0.125, 0.0125, 0, -0.0125, -0.125, -0.25, -0.5, -1]),
     },
     'taxonomies': {
         'height': 2,

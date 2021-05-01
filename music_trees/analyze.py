@@ -16,7 +16,7 @@ from scipy.stats import wilcoxon
 BASELINE_NAME = 'baseline'
 ANALYSES_DIR = mt.ROOT_DIR / 'analyses'
 
-ALL_COLORS = ["ff595e", "ffca3a", "8ac926", "1982c4", "6a4c93"]
+ALL_COLORS = ["#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#6a4c93"]
 random.shuffle(ALL_COLORS)
 
 
@@ -52,7 +52,8 @@ def significance(df: pd.DataFrame, dv: str, iv: str, cond: str):
 
 
 def bar_with_error(df: pd.DataFrame, dv: str, iv: str,
-                   cond: str, title: str = None, ylabel: str = None) -> plt.figure:
+                   cond: str, title: str = None,
+                   xlabel: str = None, ylabel: str = None) -> plt.figure:
     """
     dv --> dependent variable
     iv --> independent variable
@@ -82,9 +83,9 @@ def bar_with_error(df: pd.DataFrame, dv: str, iv: str,
                           for i, tr in enumerate(all_trials))
     for idx, tr in enumerate(all_trials):
         plt.bar(bar_pos[tr], means[tr], yerr=stds[tr], width=bar_width, capsize=12*bar_width,
-                color='#'+ALL_COLORS[idx], edgecolor='white', label=tr)
+                color=ALL_COLORS[idx], edgecolor='white', label=tr)
 
-    plt.xlabel(cond)
+    plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.xticks(ticks=[i + bar_width for i in range(len(all_conds))],
                labels=all_conds)
@@ -95,6 +96,23 @@ def bar_with_error(df: pd.DataFrame, dv: str, iv: str,
     fig = plt.gcf()
     plt.close()
 
+    return fig
+
+
+def boxplot(df: pd.DataFrame, dv: str, iv: str,
+            cond: str, title: str = None,
+            xlabel: str = None, ylabel: str = None):
+
+    import seaborn as sns
+
+    sns.boxplot(data=df, x=cond, y=dv, hue=iv, palette="pastel")
+    # sns.despine(offset=10, trim=True)
+    plt.title(title)
+    plt.ylabel(ylabel)
+    plt.xlabel(xlabel)
+    plt.tight_layout()
+    fig = plt.gcf()
+    plt.close()
     return fig
 
 
@@ -276,8 +294,9 @@ def analyze(df: pd.DataFrame, name: str):
             iv = 'name'
             cond = 'n_shot'
 
-            errorbar = bar_with_error(subset, dv=dv, iv=iv,
-                                      cond=cond, title=name, ylabel=metric)
+            errorbar = boxplot(subset, dv=dv, iv=iv,
+                               cond=cond, title=name,
+                               xlabel='number of support examples', ylabel=metric)
             errorbar.savefig(subdir / f'{metric}.png')
 
             sig_df = significance(subset, dv=dv, iv=iv, cond=cond)
