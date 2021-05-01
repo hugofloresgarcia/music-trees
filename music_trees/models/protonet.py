@@ -325,7 +325,7 @@ class HierarchicalProtoNet(nn.Module):
                                 for t in metatasks if t['include_in_loss']])
         if self.height > 0:
 
-            if args.loss_weight_fn == "exp":
+            if self.loss_weight_fn == "exp":
                 self.loss_weights = torch.exp(
                     -self.loss_alpha * torch.arange(self.height))
 
