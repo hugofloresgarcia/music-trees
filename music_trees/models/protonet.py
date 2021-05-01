@@ -342,11 +342,11 @@ class HierarchicalProtoNet(nn.Module):
 
             elif self.loss_weight_fn == "interp-avg":
                 self.loss_weights = torch.ones(
-                    self.height) / len(self.height) * (1 - self.loss_alpha)
+                    self.height) / (self.height-1) * (1 - self.loss_alpha)
                 self.loss_weights[0] = 1 * self.loss_alpha
 
                 output['loss'] = self.loss_alpha * loss_vec[0] + \
-                    (1 - self.loss_alpha) * torch.mean(self.loss_vec[1:])
+                    (1 - self.loss_alpha) * torch.mean(loss_vec[1:])
 
             else:
                 raise ValueError
