@@ -39,6 +39,12 @@ CONFIGS = {
         'loss_alpha': tune.grid_search([0.5, 0.75, 0.9]),
         'loss_beta': tune.grid_search([0.25, 0.5, 1]),
     },
+    'loss-interp-avg-decay-incus': {
+        'loss_weight_fn': 'interp-avg-decay',
+        'height': 4,
+        'loss_alpha': tune.grid_search([0.25, 0.8]),
+        'loss_beta': tune.grid_search([0.75, 1.25, 0.125]),
+    },
     'loss-baseline-alpha': {
         'loss_weight_fn': 'interp-avg-decay',
         'height': 4,
