@@ -133,6 +133,12 @@ python music_trees/analyze.py <PATH_TO_RESULTS> <OUTPUT_NAME>
 
 (todo)
 
+### Generate Random Taxonomies
+To generate random taxonomies use the generate-random-taxonomies script. Here is how:
+
+ `python music_trees/generate-random-taxonomies.py --num_taxonomies <NUMBER OF TAXONOMIES> --sizes <LIST OF SIZES> --size_type <SINGLE OR MULTI>`
+
+ num_taxonomies specifies how many random taxonomies you would like to generate. sizes is the sizes of each random taxonomy. For example `--sizes "[[1], [1, 2, 3]]"` would generate taxonomies of 1 group, and taxonomies with 1 group containing 2 sub-groups containing 3 sub-groups of the sub-group. If you want all taxonomies to have the same structure you can pass a single list: `--sizes "[1]"` size_type, if passing a single list for sizes use single, if passing a lists of lists use multi.  
 
 ### Monitor
 
