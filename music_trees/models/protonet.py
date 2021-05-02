@@ -66,6 +66,7 @@ class HierarchicalProtoNet(nn.Module):
 
         self.loss_weight_fn = args.loss_weight_fn
         self.loss_alpha = args.loss_alpha
+        self.loss_beta = args.loss_beta
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -341,6 +342,14 @@ class HierarchicalProtoNet(nn.Module):
                     self.loss_weights.type_as(loss_vec) * loss_vec)
 
             elif self.loss_weight_fn == "interp-avg":
+                self.loss_weights = torch.ones(
+                    self.height) / (self.height-1) * (1 - self.loss_alpha)
+                self.loss_weights[0] = 1 * self.loss_alpha
+
+                output['loss'] = self.loss_alpha * loss_vec[0] + \
+                    (1 - self.loss_alpha) * torch.mean(loss_vec[1:])
+
+            elif self.loss_weight_fn == "interp-avg-decay":
                 self.loss_weights = torch.ones(
                     self.height) / (self.height-1) * (1 - self.loss_alpha)
                 self.loss_weights[0] = 1 * self.loss_alpha
