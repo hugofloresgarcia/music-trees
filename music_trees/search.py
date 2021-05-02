@@ -33,26 +33,23 @@ CONFIGS = {
     'd_root': {
         'd_root': tune.grid_search([64, 128, 256, 512]),
     },
-    'loss-exp': {
-        'loss_weight_fn': 'exp',
-        'height': 5,
-        'loss_alpha': tune.grid_search([1, 0.5, 0.25, 0.125, 0.0125, 0, -0.0125, -0.125, -0.25, -0.5, -1]),
-    },
-    'loss-exp-h4': {
-        'loss_weight_fn': 'exp',
+    'loss-interp-avg-decay': {
+        'loss_weight_fn': 'interp-avg-decay',
         'height': 4,
-        # 'loss_alpha': tune.grid_search([1, 0.5, 0.25, 0.0125, 0, -0.0125, -0.125, -0.25, - 0.5, - 1]),
-        'loss_alpha': tune.grid_search([-0.25, - 0.5, - 1]),
+        'loss_alpha': tune.grid_search([0.5, 0.75, 0.9]),
+        'loss_beta': tune.grid_search([0.25, 0.5, 1]),
     },
-    'loss-exp-h3': {
-        'loss_weight_fn': 'exp',
-        'height': 3,
-        'loss_alpha': tune.grid_search([1, 0.5, 0.25, 0.0125, 0, -0.0125, -0.125, -0.25, - 0.5, - 1]),
-    },
-    'loss-interp-avg': {
-        'loss_weight_fn': 'interp-avg',
+    'loss-baseline-alpha': {
+        'loss_weight_fn': 'interp-avg-decay',
         'height': 4,
-        'loss_alpha': tune.grid_search([0.1, 0.25, 0.5, 0.75, 0.9, 1]),
+        'loss_alpha': tune.grid_search([1.0]),
+        'loss_beta': tune.grid_search([1.0]),
+    },
+    'loss-baseline-beta': {
+        'loss_weight_fn': 'interp-avg-decay',
+        'height': 4,
+        'loss_alpha': tune.grid_search([0.75]),
+        'loss_beta': tune.grid_search([0]),
     },
     'taxonomies': {
         'height': 2,

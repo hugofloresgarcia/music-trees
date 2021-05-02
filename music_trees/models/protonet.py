@@ -79,11 +79,8 @@ class HierarchicalProtoNet(nn.Module):
                             help="name of taxonomy file. must be in \
                                     music_trees/assets/taxonomies")
         parser.add_argument('--loss_weight_fn', type=str, default='exp')
-        parser.add_argument('--loss_alpha', type=float, default=0.5,
-                            help="loss decay of the hierarchial loss w.r.t to height.\
-                                  if the decay is positive, the loss will get exponentially \
-                                  smaller as the height of the tree increases. if the decay is negative, \
-                                  the loss will get exponentially bigger as the height of the tree increases.")
+        parser.add_argument('--loss_alpha', type=float, default=0.75)
+        parser.add_argument('--loss_beta', type=float, default=0.5)
         return parser
 
     def _get_backbone_shape(self):
@@ -350,12 +347,17 @@ class HierarchicalProtoNet(nn.Module):
                     (1 - self.loss_alpha) * torch.mean(loss_vec[1:])
 
             elif self.loss_weight_fn == "interp-avg-decay":
-                self.loss_weights = torch.ones(
-                    self.height) / (self.height-1) * (1 - self.loss_alpha)
-                self.loss_weights[0] = 1 * self.loss_alpha
+                # alpha should be 0.5-1.0 (1 for baseline, 0 for all hierarchical)
+                # beta should be 0.75, 1, 1.25, (0 for interp-avg)
+
+                # beta is an exponential decay factor for tree losses
+                # alpha is a linear interpolation factor for mixing tree loss with leaf loss
+                self.loss_weights = torch.exp(
+                    - self.loss_beta * torch.arange(self.height-1, -1, -1)) * (1 - self.loss_alpha)
+                self.loss_weights[0] = torch.tensor(1) * self.loss_alpha
 
                 output['loss'] = self.loss_alpha * loss_vec[0] + \
-                    (1 - self.loss_alpha) * torch.mean(loss_vec[1:])
+                    torch.mean(loss_vec[1:] * self.loss_weights[1:])
 
             else:
                 raise ValueError
