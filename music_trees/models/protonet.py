@@ -355,6 +355,7 @@ class HierarchicalProtoNet(nn.Module):
                 self.loss_weights = torch.exp(
                     - self.loss_beta * torch.arange(self.height-1, -1, -1)) * (1 - self.loss_alpha)
                 self.loss_weights[0] = torch.tensor(1) * self.loss_alpha
+                self.loss_weights = self.loss_weights.type_as(loss_vec)
 
                 output['loss'] = self.loss_alpha * loss_vec[0] + \
                     torch.mean(loss_vec[1:] * self.loss_weights[1:])
