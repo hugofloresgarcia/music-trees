@@ -139,7 +139,7 @@ class HierarchicalProtoNet(nn.Module):
         # output should be shape (b, q, c)
         # so that the row vectors are the logits for the classes
         # for each query, in the batch
-        dists = torch.cdist(x_q.unsqueeze(0), x_p.unsqueeze(0), p=2) ** 2
+        dists = torch.cdist(x_q.unsqueeze(0), x_p.unsqueeze(0), p=2)
 
         # remove batch dim for dists
         assert dists.shape[0] == 1
@@ -285,7 +285,7 @@ class HierarchicalProtoNet(nn.Module):
             # compute query-prototype distances
             # when using cdist, make sure to unsqueeze a batch dimension
             ancestor_dists = torch.cdist(
-                query.unsqueeze(0), ancestor_protos.unsqueeze(0), p=2) ** 2
+                query.unsqueeze(0), ancestor_protos.unsqueeze(0), p=2)
 
             # remember to remove batch dim from output distances
             ancestor_dists = ancestor_dists.squeeze(0)
