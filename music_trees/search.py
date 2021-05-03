@@ -69,8 +69,8 @@ CONFIGS = {
         'loss_beta': 1,
         'taxonomy_name': tune.grid_search(RANDOM_TAXONOMIES)
     },
-    'baseline': {
-        'height': 0,
+    'baseline-proposed': {
+        'height': tune.grid_search([0, 4]),
     }
 }
 
