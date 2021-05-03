@@ -67,11 +67,9 @@ CONFIGS = {
         'loss_beta': tune.grid_search([0]),
     },
     'random-taxonomies': {
-        'loss_weight_fn': 'interp-avg-decay',
         'taxonomy_name': tune.grid_search(RANDOM_TAXONOMIES)
     },
-    'scrambled-taxonomies': {
-        'loss_weight_fn': 'interp-avg-decay',
+    'scrambled-tax': {
         'taxonomy_name': tune.grid_search(SCRAMBLED_TAXONOMIES)
     },
     'baseline-proposed': {
