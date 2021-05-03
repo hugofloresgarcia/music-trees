@@ -58,6 +58,10 @@ class HierarchicalProtoNet(nn.Module):
         assert args.height >= 0
         self.height = args.height
 
+        # inserting hack here to match paper
+        if self.height > 0:
+            self.height += 1
+
         taxonomy = mt.utils.data.load_entry(
             mt.ASSETS_DIR/'taxonomies'/f'{args.taxonomy_name}.yaml', 'yaml')
         self.tree = mt.tree.MusicTree.from_taxonomy(taxonomy)
