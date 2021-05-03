@@ -278,6 +278,38 @@ class MusicTree(Tree):
 
         return node_path[height]
 
+    def swap_leaves(self, a: MusicNode, b: MusicNode):
+        assert self.is_leaf(a) and self.is_leaf(b)
+
+        if a.uid == b.uid:
+            return
+
+        # get both parents
+        pa = self.parent(a.uid)
+        pb = self.parent(b.uid)
+
+        # remove a and b from tree
+        self.remove_node(a.uid)
+        self.remove_node(b.uid)
+
+        # add a as a child of pb and b as a child of pa
+        self.add_node(a, pb)
+        self.add_node(b, pa)
+
+        return self
+
+    def _r_2dict(self, node):
+        sample_child = self.children(node.uid)[0]
+        if self.is_leaf(sample_child):
+            return [c.uid for c in self.children(node.uid)]
+        else:
+            return {c.uid: self._r_2dict(c)
+                    for c in self.children(node.uid)}
+
+    def _2dict(self):
+        d = {self.root: self._r_2dict(self.get_node(self.root))}
+        return d
+
 
 if __name__ == "__main__":
     taxonomy = mdb.INST_TAXONOMY

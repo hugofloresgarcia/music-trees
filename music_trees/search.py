@@ -14,14 +14,18 @@ RANDOM_TAXONOMIES = [
     f'random-taxonomies/random-taxonomy-{i}' for i in range(10)]
 RANDOM_TAXONOMIES.extend(['deeper-mdb'])
 
+SCRAMBLED_TAXONOMIES = [
+    f'scrambled-{i}' for i in range(10)]
+SCRAMBLED_TAXONOMIES.extend(['deeper-mdb'])
+
 # default hyperparameters go here
 DEFAULTS = {
     'model_name': 'hprotonet',
-    'height': 0,
+    'height': 4,
     'd_root': 128,
     'loss_alpha': 0.5,
     'loss_beta': 1,
-
+    'loss_weight_fn': 'interp-avg-decay',
     'dataset': 'mdb-aug',
     'num_workers': 20,
     'learning_rate': 0.03
@@ -64,21 +68,16 @@ CONFIGS = {
     },
     'random-taxonomies': {
         'loss_weight_fn': 'interp-avg-decay',
-        'height': 4,
-        'loss_alpha': 0.5,
-        'loss_beta': 1,
         'taxonomy_name': tune.grid_search(RANDOM_TAXONOMIES)
     },
-    'baseline-proposed': {
+    'scrambled-taxonomies': {
         'loss_weight_fn': 'interp-avg-decay',
-        'loss_alpha': 0.5,
-        'loss_beta': 1,
+        'taxonomy_name': tune.grid_search(SCRAMBLED_TAXONOMIES)
+    },
+    'baseline-proposed': {
         'height': tune.grid_search([0, 4]),
     },
     'height-v1': {
-        'loss_weight_fn': 'interp-avg-decay',
-        'loss_alpha': 0.5,
-        'loss_beta': 1,
         'height': tune.grid_search([0, 1, 2, 3, 4]),
     }
 }

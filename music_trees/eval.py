@@ -32,7 +32,7 @@ def evaluate(exp_dir):
     ckpt = torch.load(ckpt_path)
 
     # set run's name
-    name = ckpt['hyper_parameters']['args'].name
+    name = mt.generate.core.clean(ckpt['hyper_parameters']['args'].name)
 
     # define an output dir
     results_dir = results_path = mt.RESULTS_DIR / \
@@ -217,6 +217,7 @@ def episode_metrics(outputs: dict, name: str, results_dir,
             conf_matrix_path.parent.mkdir(exist_ok=True, parents=True)
 
             fig.savefig(conf_matrix_path)
+            fig.close()
 
             if 'tree' not in tag:
                 # track the highest least common ancestor

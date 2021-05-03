@@ -1,0 +1,138 @@
+root:
+  aerophones:
+    free aerophones:
+      interruptive free aerophones:
+      - trumpet
+      - accordion
+      - gong
+      - harmonium
+      - oud
+      - baritone saxophone
+      - tack piano
+    non-free aerophones:
+      edge-blown aerophones:
+      - bass drum
+      - conga
+      - sitar
+      - clarinet
+      - female speaker
+      - rattle
+      - bassoon
+      reed aerophones:
+        double reeds:
+        - lap steel guitar
+        - oboe
+        - electric piano
+        - string section
+        singe reeds:
+        - cornet
+        - harp
+        - shaker
+        - viola
+        - bandoneon
+        - tuba
+        - flute section
+      trumpets:
+      - trumpet section
+      - sleigh bells
+      - erhu
+      - harpsichord
+      - glockenspiel
+      - yangqin
+      - flute
+      - vocalists
+      - double bass
+      - drum set
+      - toms
+  chordophones:
+    composite chordophones:
+      lutes:
+        bowed:
+        - cabasa
+        - electric bass
+        - male screamer
+        - castanet
+        - vibraphone
+        - crowd
+        - pipe organ
+        - cello section
+        - choir
+        - bongo
+        plucked:
+        - harmonica
+        - high hat
+        - guzheng
+        - horn section
+        - trombone
+        - liuqin
+        - maracas
+        - melodica
+        - triangle
+        - trombone section
+        - violin section
+        - timpani
+        - piano
+        - cymbal
+        - tambourine
+    simple chordophones or zithers:
+    - dizi
+    - english horn
+    - xylophone
+    - piccolo
+  idiophones:
+    struck idiophones:
+      directly struck idiophones:
+      - male speaker
+      - clean electric guitar
+      - french horn section
+      - cowbell
+      - beatboxing
+      - zhongruan
+      - cello
+      - female screamer
+      - panpipes
+      indirectly struck idiophones:
+      - viola section
+      - male singer
+      - male rapper
+      - concertina
+      - euphonium
+      - female singer
+      xylophones:
+      - dulcimer
+      - auxiliary percussion
+      - snare drum
+      - marimba
+      - bass clarinet
+      - female rapper
+  membranophones:
+    struck membranophones:
+      hand percussion:
+      - alto saxophone
+      - bamboo flute
+      - tabla
+      - acoustic guitar
+      - brass section
+      - guiro
+      - claps
+      single instruments:
+      - recorder
+      - darbuka
+      - banjo
+      - doumbek
+      - tenor saxophone
+      - kick drum
+  voices:
+    voice:
+    - mandolin
+    - slide guitar
+    - ukulele
+    - chimes
+    - french horn
+    - violin
+    - dilruba
+    - bagpipe
+    - soprano saxophone
+    - gu
+    - clarinet section
+    - snaps
