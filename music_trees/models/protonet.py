@@ -364,6 +364,7 @@ class HierarchicalProtoNet(nn.Module):
                 raise ValueError
 
         else:
+            self.loss_weights = torch.tensor([1, 0, 0, 0])
             output['loss'] = metatasks[0]['loss']
 
         # insert metatasks in ascending order
