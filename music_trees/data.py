@@ -331,7 +331,7 @@ class MetaDataModule(pl.LightningDataModule):
         parser.add_argument('--num_workers', type=int, required=False)
         parser.add_argument('--n_shot', type=int, default=4)
         parser.add_argument('--n_query', type=int, default=12)
-        parser.add_argument('--n_class', type=int, default=16)
+        parser.add_argument('--n_class', type=int, default=12)
 
         return parser
 

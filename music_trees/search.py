@@ -21,7 +21,7 @@ SCRAMBLED_TAXONOMIES.insert(0, 'deeper-mdb')
 # default hyperparameters go here
 DEFAULTS = {
     'model_name': 'hprotonet',
-    'height': 4,
+    'height': 3,
     'd_root': 128,
     'loss_alpha': 0.5,
     'loss_beta': 1,

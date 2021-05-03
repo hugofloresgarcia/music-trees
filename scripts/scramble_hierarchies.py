@@ -41,7 +41,7 @@ def scramble_tree(tree: MusicTree):
 
 
 def export_tree(tree: MusicTree, fp: str):
-    mt.utils.data.save_entry(tree._2dict(), fp, format='yaml')
+    mt.utils.data.save_entry(tree._2dict()['root'], fp, format='yaml')
 
 
 if __name__ == "__main__":

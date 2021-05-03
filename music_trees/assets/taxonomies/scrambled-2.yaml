@@ -1,138 +1,137 @@
-root:
-  aerophones:
-    free aerophones:
-      interruptive free aerophones:
-      - snaps
-      - bagpipe
-      - maracas
-      - female singer
-      - viola
-      - violin section
-      - viola section
-    non-free aerophones:
-      edge-blown aerophones:
-      - flute
-      - female rapper
-      - snare drum
-      - panpipes
-      - trombone
-      - female speaker
-      - french horn section
-      reed aerophones:
-        double reeds:
-        - bamboo flute
-        - conga
-        - harmonium
-        - english horn
-        singe reeds:
-        - glockenspiel
-        - harmonica
-        - dulcimer
-        - doumbek
-        - flute section
-        - erhu
-        - sitar
-      trumpets:
-      - soprano saxophone
-      - guzheng
-      - sleigh bells
-      - clarinet
-      - dizi
-      - french horn
-      - recorder
-      - piano
-      - vibraphone
-      - marimba
-      - crowd
-  chordophones:
-    composite chordophones:
-      lutes:
-        bowed:
-        - dilruba
-        - castanet
-        - zhongruan
-        - electric bass
-        - tenor saxophone
-        - euphonium
-        - tambourine
-        - electric piano
-        - liuqin
-        - claps
-        plucked:
-        - oboe
-        - baritone saxophone
-        - cello
-        - shaker
-        - violin
-        - clean electric guitar
-        - xylophone
-        - horn section
-        - tack piano
-        - double bass
-        - male singer
-        - ukulele
-        - trumpet section
-        - male screamer
-        - melodica
-    simple chordophones or zithers:
-    - trumpet
-    - cello section
-    - darbuka
-    - harp
-  idiophones:
-    struck idiophones:
-      directly struck idiophones:
-      - cabasa
-      - choir
-      - bass drum
-      - clarinet section
-      - harpsichord
-      - bandoneon
-      - cornet
-      - vocalists
-      - drum set
-      indirectly struck idiophones:
-      - tuba
-      - acoustic guitar
-      - male speaker
-      - guiro
-      - pipe organ
-      - triangle
-      xylophones:
-      - male rapper
-      - beatboxing
-      - gu
-      - accordion
-      - piccolo
-      - gong
-  membranophones:
-    struck membranophones:
-      hand percussion:
-      - cowbell
-      - brass section
-      - yangqin
-      - auxiliary percussion
-      - bass clarinet
-      - bassoon
-      - oud
-      single instruments:
-      - cymbal
-      - high hat
-      - banjo
-      - tabla
-      - trombone section
-      - mandolin
-  voices:
-    voice:
-    - female screamer
-    - bongo
-    - slide guitar
-    - kick drum
-    - rattle
+aerophones:
+  free aerophones:
+    interruptive free aerophones:
+    - dizi
+    - mandolin
+    - dilruba
     - string section
-    - lap steel guitar
     - chimes
-    - toms
-    - alto saxophone
+    - tack piano
+    - clean electric guitar
+  non-free aerophones:
+    edge-blown aerophones:
+    - guzheng
+    - female screamer
+    - trombone
+    - marimba
+    - tenor saxophone
+    - clarinet
+    - sleigh bells
+    reed aerophones:
+      double reeds:
+      - female speaker
+      - brass section
+      - vocalists
+      - baritone saxophone
+      singe reeds:
+      - kick drum
+      - guiro
+      - rattle
+      - cowbell
+      - glockenspiel
+      - flute
+      - accordion
+    trumpets:
+    - yangqin
+    - cello
+    - triangle
+    - bandoneon
+    - doumbek
     - concertina
-    - timpani
+    - violin section
+    - zhongruan
+    - viola
+    - viola section
+    - crowd
+chordophones:
+  composite chordophones:
+    lutes:
+      bowed:
+      - double bass
+      - banjo
+      - piccolo
+      - auxiliary percussion
+      - timpani
+      - harp
+      - cello section
+      - trumpet section
+      - trombone section
+      - french horn section
+      plucked:
+      - alto saxophone
+      - recorder
+      - clarinet section
+      - oboe
+      - english horn
+      - snaps
+      - violin
+      - claps
+      - euphonium
+      - castanet
+      - gu
+      - bongo
+      - trumpet
+      - tuba
+      - pipe organ
+  simple chordophones or zithers:
+  - electric piano
+  - acoustic guitar
+  - bagpipe
+  - cymbal
+idiophones:
+  struck idiophones:
+    directly struck idiophones:
+    - beatboxing
+    - bassoon
+    - dulcimer
+    - panpipes
+    - ukulele
+    - harpsichord
+    - flute section
+    - bamboo flute
+    - cabasa
+    indirectly struck idiophones:
+    - male rapper
+    - bass drum
+    - darbuka
+    - toms
+    - erhu
+    - high hat
+    xylophones:
+    - slide guitar
+    - conga
+    - male speaker
+    - harmonium
+    - vibraphone
+    - lap steel guitar
+membranophones:
+  struck membranophones:
+    hand percussion:
+    - melodica
+    - bass clarinet
+    - cornet
+    - harmonica
+    - drum set
+    - gong
+    - tabla
+    single instruments:
+    - male screamer
+    - tambourine
+    - snare drum
+    - choir
+    - french horn
+    - sitar
+voices:
+  voice:
+  - female singer
+  - xylophone
+  - oud
+  - liuqin
+  - electric bass
+  - horn section
+  - soprano saxophone
+  - female rapper
+  - male singer
+  - shaker
+  - piano
+  - maracas
