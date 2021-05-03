@@ -70,11 +70,13 @@ CONFIGS = {
         'taxonomy_name': tune.grid_search(RANDOM_TAXONOMIES)
     },
     'baseline-proposed': {
+        'loss_weight_fn': 'interp-avg-decay',
         'loss_alpha': 0.5,
         'loss_beta': 1,
         'height': tune.grid_search([0, 4]),
     },
     'height-v1': {
+        'loss_weight_fn': 'interp-avg-decay',
         'loss_alpha': 0.5,
         'loss_beta': 1,
         'height': tune.grid_search([0, 1, 2, 3, 4]),
