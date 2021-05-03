@@ -85,7 +85,6 @@ class MetaDataset(torch.utils.data.Dataset):
         """
         super().__init__()
         # load the classlist for this partition
-        self.partition = partition
         self.root = mt.DATA_DIR / name
         self.deterministic = deterministic
         self.files = self._load_files(name, partition)
@@ -93,20 +92,25 @@ class MetaDataset(torch.utils.data.Dataset):
 
         self.n_episodes = n_episodes
 
-        self.audio_tfm = audio_tfm
-
-        self.cache_name = repr(self.audio_tfm)
-        self.cache_root = mt.CACHE_DIR / name / self.cache_name
-        self.cache_root.mkdir(exist_ok=True, parents=True)
-
         self.n_class = min(len(self.classes), n_class)
-        self.set_n_shot(n_shot)
+        self.n_shot = n_shot
         self.n_query = n_query
 
-    def set_n_shot(self, n_shot):
-        self.n_shot = n_shot
+        self.audio_tfm = audio_tfm
+
+        cache_name = repr(self.audio_tfm)
+        self.cache_root = mt.CACHE_DIR / name / cache_name
+        self.cache_root.mkdir(exist_ok=True, parents=True)
+        # self.cache_dataset()
+
+        # generally, we want to create new episodes
+        # on the fly
+        # however, for validation and evaluation,
+        # we want the episodes to remain deterministic
+        # so we'll cache the episode metadata here
+
         self.epi_cache_root = self.cache_root.parent /  \
-            f'{self.cache_name}-deterministic-episodes-{self.partition}-k{n_shot}-c{self.n_class}-q{self.n_query}'
+            f'{cache_name}-deterministic-episodes-{partition}-k{n_shot}-c{n_class}-q{n_query}'
         self.epi_cache_root.mkdir(exist_ok=True)
 
     def __len__(self):
