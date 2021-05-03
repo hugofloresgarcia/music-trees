@@ -16,7 +16,7 @@ RANDOM_TAXONOMIES.extend(['deeper-mdb'])
 
 SCRAMBLED_TAXONOMIES = [
     f'scrambled-{i}' for i in range(10)]
-SCRAMBLED_TAXONOMIES.extend(['deeper-mdb'])
+SCRAMBLED_TAXONOMIES.insert(0, 'deeper-mdb')
 
 # default hyperparameters go here
 DEFAULTS = {
