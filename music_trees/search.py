@@ -10,6 +10,10 @@ import music_trees as mt
 
 SEEDS = [mt.SEED]
 
+RANDOM_TAXONOMIES = [
+    f'random-taxonomies/random-taxonomy-{i}' for i in range(10)]
+RANDOM_TAXONOMIES.extend(['deeper-mdb'])
+
 # default hyperparameters go here
 DEFAULTS = {
     'model_name': 'hprotonet',
@@ -57,9 +61,16 @@ CONFIGS = {
         'loss_alpha': tune.grid_search([0.75]),
         'loss_beta': tune.grid_search([0]),
     },
+    'random-taxonomies': {
+        'loss_weight_fn': 'interp-avg-decay',
+        'height': 4,
+        'loss_alpha': 0.5,
+        'loss_beta': 1,
+        'taxonomy_name': tune.grid_search()
+    },
     'taxonomies': {
         'height': 2,
-        'taxonomy_name': tune.grid_search(['random-taxonomy', 'origin-taxonomy', 'deeper-mdb'])
+        'taxonomy_name': tune.grid_search(RANDOM_TAXONOMIES)
     }
 }
 
