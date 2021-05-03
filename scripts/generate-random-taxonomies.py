@@ -77,11 +77,11 @@ def _write_taxonomy(file_num: int, path: str, taxo: dict):
         # based case we've hit a list of instruments
         if isinstance(taxo, list):
             for inst in taxo:
-                cur_chunck = '\t'*i + f'{inst}\n'
+                cur_chunck = '  '*i + f'{inst}\n'
                 taxonomy[0] += cur_chunck
         else:
             for key in taxo.keys():
-                group_name = '\t'*i + f'{key}:\n'
+                group_name = '  '*i + f'{key}:\n'
                 taxonomy[0] += group_name
                 _write_helper(taxo[key], i+1)
 
