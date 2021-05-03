@@ -217,7 +217,6 @@ def episode_metrics(outputs: dict, name: str, results_dir,
             conf_matrix_path.parent.mkdir(exist_ok=True, parents=True)
 
             fig.savefig(conf_matrix_path)
-            fig.close()
 
             if 'tree' not in tag:
                 # track the highest least common ancestor
