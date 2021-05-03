@@ -19,7 +19,8 @@ DEFAULTS = {
     'model_name': 'hprotonet',
     'height': 0,
     'd_root': 128,
-    'loss_alpha': 1,
+    'loss_alpha': 0.5,
+    'loss_beta': 1,
 
     'dataset': 'mdb-aug',
     'num_workers': 20,
@@ -66,11 +67,10 @@ CONFIGS = {
         'height': 4,
         'loss_alpha': 0.5,
         'loss_beta': 1,
-        'taxonomy_name': tune.grid_search()
-    },
-    'taxonomies': {
-        'height': 2,
         'taxonomy_name': tune.grid_search(RANDOM_TAXONOMIES)
+    },
+    'baseline': {
+        'height': 0,
     }
 }
 
