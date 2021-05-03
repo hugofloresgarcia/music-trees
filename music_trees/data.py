@@ -93,15 +93,15 @@ class MetaDataset(torch.utils.data.Dataset):
 
         self.n_episodes = n_episodes
 
-        self.n_class = min(len(self.classes), n_class)
-        self.set_n_shot(n_shot)
-        self.n_query = n_query
-
         self.audio_tfm = audio_tfm
 
         self.cache_name = repr(self.audio_tfm)
         self.cache_root = mt.CACHE_DIR / name / self.cache_name
         self.cache_root.mkdir(exist_ok=True, parents=True)
+
+        self.n_class = min(len(self.classes), n_class)
+        self.set_n_shot(n_shot)
+        self.n_query = n_query
 
     def set_n_shot(self, n_shot):
         self.n_shot = n_shot
