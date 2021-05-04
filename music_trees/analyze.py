@@ -344,7 +344,7 @@ def analyze(df: pd.DataFrame, name: str):
             box = boxplot(subset, dv=dv, iv=iv,
                           cond=cond, title=name,
                           xlabel='number of support examples', ylabel=metric)
-            boxdir = subdir / 'error-bars'
+            boxdir = subdir / 'boxplots'
             boxdir.mkdir(exist_ok=True)
             box.savefig(boxdir / f'{metric}.png')
 
