@@ -24,7 +24,7 @@ DEFAULTS = {
     'height': 3,
     'd_root': 128,
     'loss_alpha': 0.5,
-    'loss_beta': 1,
+    'loss_beta': 0.5,
     'loss_weight_fn': 'interp-avg-decay',
     'dataset': 'mdb-aug',
     'num_workers': 20,
@@ -76,7 +76,7 @@ CONFIGS = {
         'height': tune.grid_search([0, 4]),
     },
     'height-v1': {
-        'height': tune.grid_search([0, 1, 2, 3, 4]),
+        'height': tune.grid_search([4, 2, 0, 3, 1]),
     }
 }
 
