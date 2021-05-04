@@ -16,8 +16,9 @@ from scipy.stats import wilcoxon
 BASELINE_NAME = 'baseline'
 ANALYSES_DIR = mt.ROOT_DIR / 'analyses'
 
-ALL_COLORS = ["#ff595e", "#ffca3a", "#8ac926", "#1982c4",
-              "#6a4c93", "#ed6a5a", "#f4f1bb", "#9bc1bc", "#5d576b", "#e6ebe0", "#ffa400", "#009ffd", "#2a2a72", "#232528", "#eaf6ff"]
+ALL_COLORS = ["#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#eaf6ff"
+              "#6a4c93", "#ed6a5a", "#f4f1bb", "#9bc1bc", "#5d576b",
+              "#e6ebe0", "#ffa400", "#009ffd", "#2a2a72", "#232528", ]
 random.shuffle(ALL_COLORS)
 
 
@@ -341,8 +342,8 @@ def analyze(df: pd.DataFrame, name: str):
             errorbar.savefig(errordir / f'{metric}.png')
 
             box = boxplot(subset, dv=dv, iv=iv,
-                                      cond=cond, title=name,
-                                      xlabel='number of support examples', ylabel=metric)
+                          cond=cond, title=name,
+                          xlabel='number of support examples', ylabel=metric)
             boxdir = subdir / 'error-bars'
             boxdir.mkdir(exist_ok=True)
             box.savefig(boxdir / f'{metric}.png')
