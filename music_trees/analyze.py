@@ -16,7 +16,8 @@ from scipy.stats import wilcoxon
 BASELINE_NAME = 'baseline'
 ANALYSES_DIR = mt.ROOT_DIR / 'analyses'
 
-ALL_COLORS = ["#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#6a4c93"]
+ALL_COLORS = ["#ff595e", "#ffca3a", "#8ac926", "#1982c4",
+              "#6a4c93", "#ed6a5a", "#f4f1bb", "#9bc1bc", "#5d576b", "#e6ebe0", "#ffa400", "#009ffd", "#2a2a72", "#232528", "#eaf6ff"]
 random.shuffle(ALL_COLORS)
 
 
@@ -114,6 +115,37 @@ def boxplot(df: pd.DataFrame, dv: str, iv: str,
     fig = plt.gcf()
     plt.close()
     return fig
+
+
+def table(df: pd.DataFrame, dv: str, iv: str,
+          cond: str, title: str = None,
+          xlabel: str = None, ylabel: str = None):
+
+    # get all possible values for the IV and conditions
+    all_trials = list(natsorted(df[iv].unique()))
+    all_conds = list(natsorted(df[cond].unique()))
+
+    bar_width = 0.25 * 3 / len(all_trials)
+
+    means = OrderedDict((tr, []) for tr in all_trials)
+    stds = OrderedDict((tr, []) for tr in all_trials)
+    mnstd = OrderedDict((tr, []) for tr in all_trials)
+    for trial in all_trials:
+        for c in all_conds:
+            # get the list of all scores per episode
+            values = df[(df[iv] == trial) & (df[cond] == c)][dv].values
+
+            means[trial].append(np.mean(values))
+            stds[trial].append(np.std(values))
+            mnstd[trial].append(f'{np.mean(values):.4f}±{np.std(values):.4f}')
+
+    tbl = pd.DataFrame()
+    tbl['trial'] = all_trials
+
+    for i, c in enumerate(all_conds):
+        tbl[c] = [v[i] for v in mnstd.values()]
+
+    return tbl
 
 
 def epi_below_base(df: pd.DataFrame, tag: str, metric: str):
@@ -294,10 +326,26 @@ def analyze(df: pd.DataFrame, name: str):
             iv = 'name'
             cond = 'n_shot'
 
-            errorbar = boxplot(subset, dv=dv, iv=iv,
-                               cond=cond, title=name,
-                               xlabel='number of support examples', ylabel=metric)
-            errorbar.savefig(subdir / f'{metric}.png')
+            tbl = table(subset, dv=dv, iv=iv,
+                        cond=cond, title=name,
+                        xlabel='n_shot', ylabel=metric)
+            tbldir = subdir / 'tables'
+            tbldir.mkdir(exist_ok=True)
+            tbl.to_markdown(tbldir / f'{metric}.md')
+
+            errorbar = bar_with_error(subset, dv=dv, iv=iv,
+                                      cond=cond, title=name,
+                                      xlabel='number of support examples', ylabel=metric)
+            errordir = subdir / 'error-bars'
+            errordir.mkdir(exist_ok=True)
+            errorbar.savefig(errordir / f'{metric}.png')
+
+            box = boxplot(subset, dv=dv, iv=iv,
+                                      cond=cond, title=name,
+                                      xlabel='number of support examples', ylabel=metric)
+            boxdir = subdir / 'error-bars'
+            boxdir.mkdir(exist_ok=True)
+            box.savefig(boxdir / f'{metric}.png')
 
             sig_df = significance(subset, dv=dv, iv=iv, cond=cond)
             sig_dir = subdir / 'significance'

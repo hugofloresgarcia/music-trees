@@ -8,6 +8,8 @@ from pathlib import Path
 import pytorch_lightning as pl
 import torch
 
+pl.seed_everything(mt.SEED)
+
 MAX_EPISODES = 60000
 NUM_VAL_EPISODES = 300
 VAL_CHECK_INTERVAL = 300
