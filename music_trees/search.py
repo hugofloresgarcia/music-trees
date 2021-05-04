@@ -23,9 +23,9 @@ DEFAULTS = {
     'model_name': 'hprotonet',
     'height': 3,
     'd_root': 128,
-    'loss_alpha': 0.5,
+    'loss_alpha': 1,
     'loss_beta': 0.5,
-    'loss_weight_fn': 'interp-avg-decay',
+    'loss_weight_fn': 'exp',
     'dataset': 'mdb-aug',
     'num_workers': 20,
     'learning_rate': 0.03
