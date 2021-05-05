@@ -10,9 +10,7 @@ import music_trees as mt
 
 SEEDS = [mt.SEED]
 
-RANDOM_TAXONOMIES = [
-    f'random-taxonomies/random-taxonomy-{i}' for i in range(10)]
-RANDOM_TAXONOMIES.extend(['deeper-mdb'])
+RANDOM_TAXONOMIES = [f'random-taxonomy-{i}' for i in range(10)]
 
 SCRAMBLED_TAXONOMIES = [
     f'scrambled-{i}' for i in range(10)]
@@ -21,7 +19,7 @@ SCRAMBLED_TAXONOMIES.insert(0, 'deeper-mdb')
 # default hyperparameters go here
 DEFAULTS = {
     'model_name': 'hprotonet',
-    'height': 3,
+    'height': 1,
     'd_root': 128,
     'loss_alpha': 1,
     'loss_beta': 0.5,
