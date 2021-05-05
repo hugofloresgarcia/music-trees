@@ -20,3 +20,4 @@ runs*.tar.gz
 results*.tar.gz
 runs*/
 results*/
+analyses*/

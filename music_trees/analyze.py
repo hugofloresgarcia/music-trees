@@ -17,8 +17,7 @@ BASELINE_NAME = 'baseline'
 ANALYSES_DIR = mt.ROOT_DIR / 'analyses'
 
 ALL_COLORS = ["#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#eaf6ff",
-              "#6a4c93", "#ed6a5a", "#f4f1bb", "#9bc1bc", "#5d576b",
-              "#e6ebe0", "#ffa400", "#009ffd", "#2a2a72", "#232528", ]
+              "#6a4c93", "#ed6a5a", "#f4f1bb", "#9bc1bc", "#5d576b", ]
 random.shuffle(ALL_COLORS)
 
 
@@ -353,13 +352,13 @@ def analyze(df: pd.DataFrame, name: str):
             sig_dir.mkdir(exist_ok=True)
             sig_df.to_csv(sig_dir / f'significance-{metric}.csv')
 
-            comp_dir = subdir / 'episode-comparisons'
-            comp_dir.mkdir(exist_ok=True)
-            epi_above_df = epi_above_base(subset, tag, metric)
-            epi_above_df.to_csv(comp_dir / f'episodes-above-base-{metric}.csv')
+            # comp_dir = subdir / 'episode-comparisons'
+            # comp_dir.mkdir(exist_ok=True)
+            # epi_above_df = epi_above_base(subset, tag, metric)
+            # epi_above_df.to_csv(comp_dir / f'episodes-above-base-{metric}.csv')
 
-            epi_below_df = epi_below_base(subset, tag, metric)
-            epi_below_df.to_csv(comp_dir / f'episodes-below-base-{metric}.csv')
+            # epi_below_df = epi_below_base(subset, tag, metric)
+            # epi_below_df.to_csv(comp_dir / f'episodes-below-base-{metric}.csv')
 
     return
 
