@@ -64,6 +64,7 @@ class HierarchicalProtoNet(nn.Module):
 
         taxonomy = mt.utils.data.load_entry(
             mt.ASSETS_DIR/'taxonomies'/f'{args.taxonomy_name}.yaml', 'yaml')
+
         self.tree = mt.tree.MusicTree.from_taxonomy(taxonomy)
         self.tree.even_depth()
         self.tree.show()
@@ -310,6 +311,53 @@ class HierarchicalProtoNet(nn.Module):
             ancestor_metatasks.append(ancestor_task)
 
         return ancestor_metatasks
+        
+    def hierarchy_multi_hot(metatasks):
+        """
+        hierarchy_multi_hot - generate a multihot encoding of the classification task,
+        encodes which path of the tree was selected for a predition or target 
+        EX. [
+                [one-hot height=n, one-hot height=n-1, ..., one-hot height=0,]
+                .
+                .
+                .   
+            ]
+        """
+        # start by getting the size of our multi-hot predictions and targets
+        multi_axis_0 = metatasks[0]['target'].shape[0]
+        multi_axis_1 = 1
+
+        # find the shape of axis 1
+        for task in metatasks:
+            multi_axis_1 += len(task['classlist'])
+
+        # create the multihot matrix
+        multi_hot_shape = (multi_axis_0, multi_axis_1)
+
+        # hold the one hot encodings
+        targets_list = []
+        preds_list = []
+
+        # iterating over mettask gives us the task at each height of the tree
+        for i, task in enumerate(metatasks):
+            # get the current tasks/heights one hot encodings
+            one_hot_targets = F.one_hot(task['target']) # shape: [examples, # of classes at height]
+            one_hot_preds = F.one_hot(task['pred']) # shape: [examples, # of classes at height]
+
+            #one_hot_targets = task['target'] # shape: [examples, # of classes at height]
+            #one_hot_preds = task['pred'] # shape: [examples, # of classes at height]
+
+            targets_list.append(one_hot_targets)
+            preds_list.append(one_hot_preds)
+
+        # use the lists holding one hot encodings to make multihot-encodings
+        multi_hot_targets = torch.cat(tuple(targets_list), 1)
+        multi_hot_preds = torch.cat(tuple(preds_list), 1)
+
+        loss = nn.BCELoss()
+        return loss(multi_hot_preds.float(), multi_hot_targets.float()) 
+        
+        
 
     def compute_losses(self, episode: dict, output: dict):
         """
@@ -322,6 +370,8 @@ class HierarchicalProtoNet(nn.Module):
         leaf_task = self.compute_leaf_loss(episode, input_task)
         ancestor_tasks = self.compute_ancestor_losses(episode, input_task)
         metatasks = [leaf_task] + ancestor_tasks
+        
+        breakpoint()
 
         loss_vec = torch.stack([t['loss']
                                 for t in metatasks if t['include_in_loss']])
@@ -363,6 +413,9 @@ class HierarchicalProtoNet(nn.Module):
 
                 output['loss'] = self.loss_alpha * loss_vec[0] + \
                     torch.mean(loss_vec[1:] * self.loss_weights[1:])
+            
+            elif self.loss_weight_fn == "cross-entropy":
+                output['loss'] = self.hierarchy_multi_hot(metatasks)
 
             else:
                 raise ValueError
