@@ -371,8 +371,6 @@ class HierarchicalProtoNet(nn.Module):
         ancestor_tasks = self.compute_ancestor_losses(episode, input_task)
         metatasks = [leaf_task] + ancestor_tasks
         
-        breakpoint()
-
         loss_vec = torch.stack([t['loss']
                                 for t in metatasks if t['include_in_loss']])
         if self.height > 0:
