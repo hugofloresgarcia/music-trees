@@ -312,7 +312,7 @@ class HierarchicalProtoNet(nn.Module):
 
         return ancestor_metatasks
 
-    def hierarchy_multi_hot(metatasks):
+    def hierarchy_multi_hot(self, metatasks):
         """
         hierarchy_multi_hot - generate a multihot encoding of the classification task,
         encodes which path of the tree was selected for a predition or target 
@@ -356,7 +356,7 @@ class HierarchicalProtoNet(nn.Module):
         multi_hot_targets = torch.cat(tuple(targets_list), 1)
         multi_hot_preds = torch.cat(tuple(preds_list), 1)
 
-        loss = nn.BCELoss()
+        loss = nn.BCEWithLogitsLoss()
         return loss(multi_hot_preds.float(), multi_hot_targets.float())
 
     def compute_losses(self, episode: dict, output: dict):
@@ -413,6 +413,7 @@ class HierarchicalProtoNet(nn.Module):
                     torch.mean(loss_vec[1:] * self.loss_weights[1:])
 
             elif self.loss_weight_fn == "cross-entropy":
+                self.loss_weights = torch.ones(self.height)
                 output['loss'] = self.hierarchy_multi_hot(metatasks)
 
             else:
