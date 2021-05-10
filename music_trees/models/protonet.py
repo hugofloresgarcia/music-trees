@@ -311,7 +311,7 @@ class HierarchicalProtoNet(nn.Module):
             ancestor_metatasks.append(ancestor_task)
 
         return ancestor_metatasks
-        
+
     def hierarchy_multi_hot(metatasks):
         """
         hierarchy_multi_hot - generate a multihot encoding of the classification task,
@@ -341,11 +341,13 @@ class HierarchicalProtoNet(nn.Module):
         # iterating over mettask gives us the task at each height of the tree
         for i, task in enumerate(metatasks):
             # get the current tasks/heights one hot encodings
-            one_hot_targets = F.one_hot(task['target']) # shape: [examples, # of classes at height]
-            one_hot_preds = F.one_hot(task['pred']) # shape: [examples, # of classes at height]
+            # shape: [examples, # of classes at height]
+            one_hot_targets = F.one_hot(task['target'])
+            # shape: [examples, # of classes at height]
+            one_hot_preds = F.one_hot(task['pred'])
 
-            #one_hot_targets = task['target'] # shape: [examples, # of classes at height]
-            #one_hot_preds = task['pred'] # shape: [examples, # of classes at height]
+            # one_hot_targets = task['target'] # shape: [examples, # of classes at height]
+            # one_hot_preds = task['pred'] # shape: [examples, # of classes at height]
 
             targets_list.append(one_hot_targets)
             preds_list.append(one_hot_preds)
@@ -355,9 +357,7 @@ class HierarchicalProtoNet(nn.Module):
         multi_hot_preds = torch.cat(tuple(preds_list), 1)
 
         loss = nn.BCELoss()
-        return loss(multi_hot_preds.float(), multi_hot_targets.float()) 
-        
-        
+        return loss(multi_hot_preds.float(), multi_hot_targets.float())
 
     def compute_losses(self, episode: dict, output: dict):
         """
@@ -370,9 +370,9 @@ class HierarchicalProtoNet(nn.Module):
         leaf_task = self.compute_leaf_loss(episode, input_task)
         ancestor_tasks = self.compute_ancestor_losses(episode, input_task)
         metatasks = [leaf_task] + ancestor_tasks
-        
-        loss_vec = torch.stack([t['loss']
-                                for t in metatasks if t['include_in_loss']])
+        metatasks = [t for t in metatasks if t['include_in_loss']]
+
+        loss_vec = torch.stack([t['loss'] for t in metatasks])
         if self.height > 0:
 
             if self.loss_weight_fn == "exp":
@@ -411,7 +411,7 @@ class HierarchicalProtoNet(nn.Module):
 
                 output['loss'] = self.loss_alpha * loss_vec[0] + \
                     torch.mean(loss_vec[1:] * self.loss_weights[1:])
-            
+
             elif self.loss_weight_fn == "cross-entropy":
                 output['loss'] = self.hierarchy_multi_hot(metatasks)
 
