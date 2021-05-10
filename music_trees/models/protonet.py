@@ -344,20 +344,20 @@ class HierarchicalProtoNet(nn.Module):
             # shape: [examples, # of classes at height]
             one_hot_targets = F.one_hot(task['target'])
             # shape: [examples, # of classes at height]
-            one_hot_preds = F.one_hot(task['pred'])
+            pred_logits = task['distances']
 
             # one_hot_targets = task['target'] # shape: [examples, # of classes at height]
             # one_hot_preds = task['pred'] # shape: [examples, # of classes at height]
 
             targets_list.append(one_hot_targets)
-            preds_list.append(one_hot_preds)
+            preds_list.append(pred_logits)
 
         # use the lists holding one hot encodings to make multihot-encodings
         multi_hot_targets = torch.cat(tuple(targets_list), 1)
-        multi_hot_preds = torch.cat(tuple(preds_list), 1)
+        preds_logits = torch.cat(tuple(preds_list), 1)
 
-        loss = nn.BCEWithLogitsLoss()
-        return loss(multi_hot_preds.float(), multi_hot_targets.float())
+        loss = F.binary_cross_entropy_with_logits(preds_logits.float(), multi_hot_targets.float())
+        return loss
 
     def compute_losses(self, episode: dict, output: dict):
         """
@@ -373,6 +373,7 @@ class HierarchicalProtoNet(nn.Module):
         metatasks = [t for t in metatasks if t['include_in_loss']]
 
         loss_vec = torch.stack([t['loss'] for t in metatasks])
+        
         if self.height > 0:
 
             if self.loss_weight_fn == "exp":
@@ -413,7 +414,7 @@ class HierarchicalProtoNet(nn.Module):
                     torch.mean(loss_vec[1:] * self.loss_weights[1:])
 
             elif self.loss_weight_fn == "cross-entropy":
-                self.loss_weights = torch.ones(self.height)
+                self.loss_weights = torch.tensor([1, 0, 0, 0])
                 output['loss'] = self.hierarchy_multi_hot(metatasks)
 
             else:
@@ -422,7 +423,7 @@ class HierarchicalProtoNet(nn.Module):
         else:
             self.loss_weights = torch.tensor([1, 0, 0, 0])
             output['loss'] = metatasks[0]['loss']
-
+            
         # insert metatasks in ascending order
         output['tasks'] = metatasks
         output['loss-weights'] = self.loss_weights.detach().cpu()
