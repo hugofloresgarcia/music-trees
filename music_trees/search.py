@@ -112,7 +112,7 @@ def run_experiment(exp):
         metric="f1/protonet/val",
         mode="max",
         max_t=mt.train.MAX_EPISODES,
-        grace_period=mt.train.MAX_EPISODES // 32,
+        grace_period=mt.train.MAX_EPISODES,
         reduction_factor=2)
 
     reporter = CLIReporter(
