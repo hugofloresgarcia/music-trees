@@ -312,7 +312,7 @@ class HierarchicalProtoNet(nn.Module):
 
         return ancestor_metatasks
 
-    def hierarchy_multi_hot(metatasks):
+    def hierarchy_multi_hot(self, metatasks):
         """
         hierarchy_multi_hot - generate a multihot encoding of the classification task,
         encodes which path of the tree was selected for a predition or target 
