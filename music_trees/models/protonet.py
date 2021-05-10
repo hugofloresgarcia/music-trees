@@ -413,6 +413,7 @@ class HierarchicalProtoNet(nn.Module):
                     torch.mean(loss_vec[1:] * self.loss_weights[1:])
 
             elif self.loss_weight_fn == "cross-entropy":
+                self.loss_weights = torch.ones(self.height)
                 output['loss'] = self.hierarchy_multi_hot(metatasks)
 
             else:
