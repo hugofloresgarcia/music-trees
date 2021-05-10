@@ -356,7 +356,7 @@ class HierarchicalProtoNet(nn.Module):
         multi_hot_targets = torch.cat(tuple(targets_list), 1)
         multi_hot_preds = torch.cat(tuple(preds_list), 1)
 
-        loss = nn.BCELoss()
+        loss = nn.BCEWithLogitsLoss()
         return loss(multi_hot_preds.float(), multi_hot_targets.float())
 
     def compute_losses(self, episode: dict, output: dict):
