@@ -105,7 +105,7 @@ def boxplot(df: pd.DataFrame, dv: str, iv: str,
             xlabel: str = None, ylabel: str = None):
 
     import seaborn as sns
-
+    df = df.sort_values(by=cond)
     sns.boxplot(data=df, x=cond, y=dv, hue=iv, palette="pastel")
     # sns.despine(offset=10, trim=True)
     plt.title(title)
