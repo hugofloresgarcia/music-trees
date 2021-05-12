@@ -109,7 +109,6 @@ class MetaTask(pl.LightningModule):
         performs a forward pass through the model,
         and computes the loss, calling self.model.compute_losses.
         """
-        breakpoint()
         # grab predictions
         output = self.model(episode)
         output.update(episode)
