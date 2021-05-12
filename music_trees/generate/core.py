@@ -7,6 +7,7 @@ from pathlib import Path
 import uuid
 import logging
 import warnings
+import random
 
 from nussl import AudioSignal
 
@@ -14,6 +15,9 @@ import tqdm
 from tqdm.contrib.concurrent import thread_map, process_map
 
 NUM_AUGMENT_FOLDS = 2
+
+rd = rd = random.Random()
+rd.seed(mt.SEED)
 
 
 def _generate_records_from_file(item: dict):
@@ -50,7 +54,7 @@ def _generate_records_from_file(item: dict):
     for sig in windows:
         extra = dict(item)
         del extra['path']
-        entry = mt.utils.data.make_entry(sig, uuid=str(uuid.uuid4()), format='wav',
+        entry = mt.utils.data.make_entry(sig, uuid=str(uuid.uuid4(int=rd.getrandbits(128)))), format='wav',
                                          **extra)
 
         if hasattr(sig, '_effect_params'):
