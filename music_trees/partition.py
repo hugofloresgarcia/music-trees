@@ -1,5 +1,7 @@
 """partition.py - dataset partitioning"""
 import music_trees as mt
+import pytorch_lightning as pl
+pl.seed_everything(mt.SEED)
 from music_trees.tree import MusicTree
 
 from collections import OrderedDict
