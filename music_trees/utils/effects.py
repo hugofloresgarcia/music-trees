@@ -3,17 +3,12 @@
 import numpy as np
 import torch
 import random
+import warnings
 import sox
 import librosa
 
 import music_trees.utils as utils
 import audio_utils as au
-
-
-def _check_audio_types(audio):
-    """ check if audio array is sox compatible"""
-    assert audio.ndim == 1, "audio must be mono"
-    assert isinstance(audio, np.ndarray)
 
 
 def get_full_effect_chain():
@@ -190,3 +185,41 @@ def get_random_transformer(effect_chain):
         effect_params[e] = params
 
     return tfm, effect_params
+
+
+def _au_check_audio_types(audio: np.ndarray):
+    assert isinstance(
+        audio, np.ndarray), f'expected np.ndarray but got {type(audio)} as input.'
+    assert audio.ndim == 2, f'audio must be shape (channels, time), got shape {audio.shape}'
+    if audio.shape[-1] < audio.shape[-2]:
+        warnings.warn(f'got audio shape {audio.shape}. Audio should be (channels, time). \
+                        typically, the number of samples is much larger than the number of channels. ')
+
+
+def _is_mono(audio: np.ndarray):
+    _au_check_audio_types(audio)
+    num_channels = audio.shape[-2]
+    return num_channels == 1
+
+
+def _is_zero(audio: np.ndarray):
+    return np.all(audio == 0)
+
+
+def librosa_input_wrap(audio: np.ndarray):
+    _au_check_audio_types(audio)
+    if _is_mono(audio):
+        audio = audio[0]
+    return audio
+
+
+def librosa_output_wrap(audio: np.ndarray):
+    if audio.ndim == 1:
+        audio = np.expand_dims(audio, axis=0)
+    return audio
+
+
+def _check_audio_types(audio):
+    """ check if audio array is sox compatible"""
+    assert audio.ndim == 1, "audio must be mono"
+    assert isinstance(audio, np.ndarray)

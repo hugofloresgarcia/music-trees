@@ -356,7 +356,8 @@ class HierarchicalProtoNet(nn.Module):
         multi_hot_targets = torch.cat(tuple(targets_list), 1)
         preds_logits = torch.cat(tuple(preds_list), 1)
 
-        loss = F.binary_cross_entropy_with_logits(preds_logits.float(), multi_hot_targets.float())
+        loss = F.binary_cross_entropy_with_logits(
+            preds_logits.float(), multi_hot_targets.float())
         return loss
 
     def compute_losses(self, episode: dict, output: dict):
@@ -373,7 +374,7 @@ class HierarchicalProtoNet(nn.Module):
         metatasks = [t for t in metatasks if t['include_in_loss']]
 
         loss_vec = torch.stack([t['loss'] for t in metatasks])
-        
+
         if self.height > 0:
 
             if self.loss_weight_fn == "exp":
@@ -403,7 +404,7 @@ class HierarchicalProtoNet(nn.Module):
                 # alpha should be 0.5-1.0 (1 for baseline, 0 for all hierarchical)
                 # beta should be 0.75, 1, 1.25, (0 for interp-avg)
 
-                # beta is an exponential decay factor for tree losses
+                #  beta is an exponential decay factor for tree losses
                 # alpha is a linear interpolation factor for mixing tree loss with leaf loss
                 self.loss_weights = torch.exp(
                     - self.loss_beta * torch.arange(self.height-1, -1, -1)) * (1 - self.loss_alpha)
@@ -423,7 +424,7 @@ class HierarchicalProtoNet(nn.Module):
         else:
             self.loss_weights = torch.tensor([1, 0, 0, 0])
             output['loss'] = metatasks[0]['loss']
-            
+
         # insert metatasks in ascending order
         output['tasks'] = metatasks
         output['loss-weights'] = self.loss_weights.detach().cpu()
