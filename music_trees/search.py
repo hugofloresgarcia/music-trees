@@ -6,6 +6,8 @@ from ray import tune
 import numpy as np
 from functools import partial
 import music_trees as mt
+import pytorch_lightning as pl
+pl.seed_everything(mt.SEED)
 
 
 SEEDS = [mt.SEED]
