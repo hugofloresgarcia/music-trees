@@ -51,10 +51,10 @@ def _generate_records_from_file(item: dict):
             logger.disabled = False
 
     # create and save a new record for each window
-    for sig in windows:
+    for idx, sig in enumerate(windows):
         extra = dict(item)
         del extra['path']
-        entry = mt.utils.data.make_entry(sig, uuid=str(uuid.UUID(int=rd.getrandbits(128))), format='wav', **extra)
+        entry = mt.utils.data.make_entry(sig, uuid=f'{extra['track']}-{idx}', format='wav', **extra)
 
         if hasattr(sig, '_effect_params'):
             entry['effect_params'] = sig._effect_params
