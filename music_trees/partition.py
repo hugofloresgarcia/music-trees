@@ -152,7 +152,7 @@ def hierarchical_partition(taxonomy: str, name: str, partitions: List[str],
     # we want to remove all classes not present in the desired taxonomy
     all_leaves = [n.uid for n in tree.leaves(tree.root)]
     classlist = [c for c in classlist if c in all_leaves]
-    breakpoint()
+
     tree.fit_to_classlist(classlist)
     populate_tree_with_class_statistics(tree, records)
 
