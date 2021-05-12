@@ -6,9 +6,19 @@ import argparse
 from pathlib import Path
 
 import pytorch_lightning as pl
+import numpy as np
+import random
 import torch
 
 pl.seed_everything(mt.SEED)
+torch.manual_seed(mt.SEED)
+np.random.seed(mt.SEED)
+random.seed(mt.SEED) 
+# for cuda
+torch.cuda.manual_seed_all(mt.SEED)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.enabled = False
 
 MAX_EPISODES = 60000
 NUM_VAL_EPISODES = 300
