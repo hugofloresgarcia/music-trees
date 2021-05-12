@@ -1,11 +1,14 @@
 """ audio effects
 """
+import music_trees as mt
 import numpy as np
 import torch
 import random
 import warnings
 import sox
 import librosa
+import pytorch_lightning as pl
+pl.seed_everything(mt.SEED)
 
 import music_trees.utils as utils
 import audio_utils as au
