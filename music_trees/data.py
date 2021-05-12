@@ -1,8 +1,9 @@
 """data.py - data loading"""
-
+import music_trees as mt
 
 import os
 import random
+random.seed(mt.SEED)
 import logging
 from pathlib import Path
 from collections import OrderedDict
