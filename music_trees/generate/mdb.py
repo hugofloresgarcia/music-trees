@@ -8,7 +8,7 @@ logging.basicConfig(level=logging.ERROR)  # override the config from root
 
 # these classes do not fit nicely in our hierarchy, either
 # because they're too general (horn section) or not a physical instrument (sampler)
-UNWANTED_CLASSES = ('Main System', 'fx/processed sound', 'sampler', 'horn sec`tion',
+UNWANTED_CLASSES = ('Main System', 'fx/processed sound', 'sampler', 'horn section',
                     'string section', 'brass section', 'castanet', 'electronic organ', 'scratches', 'theremin', )
 
 # because instrument sections are the same as the instrument,
@@ -37,8 +37,8 @@ def load_unique_instrument_list():
     instruments = list(set(instruments))
 
     # filter out classes
-    instruments = [
-        i for i in instruments if i not in UNWANTED_CLASSES and i not in REMAP_CLASSES]
+    instruments = list(sorted([
+        i for i in instruments if i not in UNWANTED_CLASSES and i not in REMAP_CLASSES]))
     logging.info(f'classlist is: {instruments}')
 
     return list(sorted(instruments))
