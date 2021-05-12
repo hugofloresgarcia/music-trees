@@ -1,3 +1,4 @@
+import music_trees as mt
 from embviz.logger import EmbeddingSpaceLogger
 from music_trees.models.protonet import HierarchicalProtoNet
 from music_trees.utils.train import batch_detach_cpu
@@ -93,6 +94,9 @@ class MetaTask(pl.LightningModule):
             raise ValueError(f"invalid model name: {args.model_name}")
 
         return parser
+
+    def on_fit_start(self):
+        pl.seed_everything(mt.SEED)
 
     @ staticmethod
     def add_model_specific_args(parent_parser):
