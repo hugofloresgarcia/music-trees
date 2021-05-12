@@ -24,57 +24,25 @@ DEFAULTS = {
     'loss_alpha': 1,
     'loss_beta': 0.5,
     'loss_weight_fn': 'exp',
-    'dataset': 'mdb-aug',
+    'dataset': 'mdb-augmented',
     'num_workers': 20,
     'learning_rate': 0.03
 }
 
 CONFIGS = {
-    'data-aug': {
-        'dataset': tune.grid_search(['mdb-aug', 'mdb']),
-    },
-    'height': {
-        'loss_alpha': NotImplemented,
-        'height': tune.grid_search([0, 2, 3, 4, 5]),
-    },
-    'd_root': {
-        'd_root': tune.grid_search([64, 128, 256, 512]),
-    },
-    'loss-interp-avg-decay': {
-        'loss_weight_fn': 'interp-avg-decay',
-        'height': 4,
-        'loss_alpha': tune.grid_search([0.5, 0.75, 0.9]),
-        'loss_beta': tune.grid_search([0.25, 0.5, 1]),
-    },
-    'loss-baseline-alpha': {
-        'loss_weight_fn': 'interp-avg-decay',
-        'height': 4,
-        'loss_alpha': tune.grid_search([1.0]),
-        'loss_beta': tune.grid_search([1.0]),
-    },
-    'loss-baseline-beta': {
-        'loss_weight_fn': 'interp-avg-decay',
-        'height': 4,
-        'loss_alpha': tune.grid_search([0.75]),
-        'loss_beta': tune.grid_search([0]),
-    },
     'scrambled-tax': {
         'taxonomy_name': tune.grid_search(SCRAMBLED_TAXONOMIES)
     },
-    'baseline-proposed': {
-        'height': tune.grid_search([0, 4]),
+    'height': {
+        'height': tune.grid_search([0, 1, 2, 3, 4]),
     },
-    'height-v1': {
-        'height': tune.grid_search([4, 2, 0, 3, 1]),
+    'height-2': {
+        'height': tune.grid_search([0, 1, 2, 3, 4]),
     },
     'loss-alpha': {
         'height': 4,
-        'loss_alpha': tune.grid_search([-4, -3, -2, -1, 1, 2, 3, 4]),
+        'loss_alpha': tune.grid_search([-4, -3, -2, -1, 0, 1, 2, 3, 4]),
     },
-    'loss-alphav2': {
-        'height': 4,
-        'loss_alpha': tune.grid_search([-4, -3, -2, -1, 1, 2, 3, 4]),
-    }
 }
 
 

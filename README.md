@@ -22,8 +22,8 @@ generation script:
 
 ```bash
 python -m music_trees.generate \
-                --dataset medleydb \
-                --name mdb-aug \
+                --dataset mdb \
+                --name mdb-augmented \
                 --example_length 1.0 \
                 --augment true \
                 --hop_length 0.5 \
@@ -34,7 +34,7 @@ This will generate both augmented and unaugmented data for MedleyDB
 
 ### 2. Partition data
 
-The partition file used for all experiments is available at `/music_trees/assets/partitions/mdb-aug.json`. 
+The partition file used for all experiments is available at `/music_trees/assets/partitions/mdb-augmented.json`. 
 
 ### 3. Run experiments
 
@@ -50,7 +50,7 @@ export CUDA_VISIBLE_DEVICES=0,1 && python music_trees/search.py --name scrambled
 **Height Search**
 (note that `height=0` and `height=1` are the baseline and proposed model, respectively)
 ```bash
-export CUDA_VISIBLE_DEVICES=0,1 && python music_trees/search.py --name height-v1
+export CUDA_VISIBLE_DEVICES=0,1 && python music_trees/search.py --name height
 ```
 
 **Loss Ablation**

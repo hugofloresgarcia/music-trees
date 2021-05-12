@@ -116,7 +116,7 @@ class HierarchicalProtoNet(nn.Module):
         x = episode['x']
 
         # forward pass through backbone
-        MAX_FP_SIZE = 512
+        MAX_FP_SIZE = 256 
         # maybe this mitigates OOM during evaluation?
         # update: it does!! we're keeping it
         x = torch.cat([self.root_forward(subx)

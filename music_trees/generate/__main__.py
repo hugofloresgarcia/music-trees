@@ -1,3 +1,7 @@
+import music_trees as mt
+import pytorch_lightning as pl
+pl.seed_everything(mt.SEED)
+
 from music_trees.generate.core import generate_data
 import argparse
 from str2bool import str2bool
