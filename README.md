@@ -30,7 +30,7 @@ python -m music_trees.generate \
                 --sample_rate 16000 \
 ```
 
-This will generate both augmented and unaugmented data for MedleyDB
+This will generate both augmented and unaugmented data for MedleyDB. **NOTE**: There was a bug in the code that disabled data augmentation silently. This bug has been left in the code for the sake of reproducibility. This is why we don't report any data augmentation in the paper, as none was applied at the time of experiments.
 
 ### 2. Partition data
 
