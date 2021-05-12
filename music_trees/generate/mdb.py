@@ -73,7 +73,7 @@ def load_all_filepaths():
     dur = 0
     for record in records:
         dur += librosa.core.get_duration(filename=record['path'])
-    breakpoint()
+    print(dur)
     return records
 
 
