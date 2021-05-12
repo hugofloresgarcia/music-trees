@@ -101,9 +101,9 @@ def glob_all_metadata_entries(root_dir, pattern='**/*.json'):
     records = process_map(
         load_entry, filepaths, disable=mt.TQDM_DISABLE, max_workers=os.cpu_count())
 
-    for r in records:
+    for i, r in enumerate(records):
         if 'trumpet' in r['label']:
-            r['label'] = 'trumpet'
+            records[i]['label'] = 'trumpet'
     return records
 
 
