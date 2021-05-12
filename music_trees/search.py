@@ -21,7 +21,7 @@ DEFAULTS = {
     'model_name': 'hprotonet',
     'height': 1,
     'd_root': 128,
-    'loss_alpha': 1,
+    'loss_alpha': 3,
     'loss_beta': 0.5,
     'loss_weight_fn': 'exp',
     'dataset': 'mdb',
