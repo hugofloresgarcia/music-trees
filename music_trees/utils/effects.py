@@ -12,7 +12,7 @@ import audio_utils as au
 
 
 def get_full_effect_chain():
-    effect_chain = ['compand', 'overdrive', 'eq', 'pitch', 'speed',
+    effect_chain = ['compand', 'eq', 'pitch', 'speed',
                     'phaser', 'flanger', 'reverb', 'chorus', 'speed']
     return effect_chain
 

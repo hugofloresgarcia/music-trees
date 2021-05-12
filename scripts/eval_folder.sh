@@ -3,5 +3,5 @@
 for dir in "${1}"/*
 do
   echo ${dir}
-  export CUDA_VISIBLE_DEVICES=${2}$ && python3.7 music_trees/eval.py --exp_dir ${dir}/version_0 
+  export CUDA_VISIBLE_DEVICES=${2}$ && python music_trees/eval.py --exp_dir ${dir}/version_0 
 done
