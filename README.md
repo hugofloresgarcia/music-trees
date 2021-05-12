@@ -30,8 +30,6 @@ python -m music_trees.generate \
                 --sample_rate 16000 
 ```
 
-This will generate both augmented and unaugmented data for MedleyDB
-
 ### 2. Partition data
 
 The partition file used for all experiments is available at `/music_trees/assets/partitions/mdb-augmented.json`. 
