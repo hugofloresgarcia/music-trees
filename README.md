@@ -27,7 +27,7 @@ python -m music_trees.generate \
                 --example_length 1.0 \
                 --augment true \
                 --hop_length 0.5 \
-                --sample_rate 16000 \
+                --sample_rate 16000 
 ```
 
 This will generate both augmented and unaugmented data for MedleyDB

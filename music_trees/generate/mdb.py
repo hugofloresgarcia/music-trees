@@ -41,7 +41,7 @@ def load_unique_instrument_list():
         i for i in instruments if i not in UNWANTED_CLASSES and i not in REMAP_CLASSES]
     logging.info(f'classlist is: {instruments}')
 
-    return instruments
+    return list(sorted(instruments))
 
 
 def get_files_for_instrument(instrument: str):
@@ -49,7 +49,7 @@ def get_files_for_instrument(instrument: str):
     # find out if we have any other files from the remapped section
     for key, val in REMAP_CLASSES.items():
         if instrument == val:
-            files.extend(list(mdb.get_files_for_instrument(key)))
+            files.extend(list(sorted(mdb.get_files_for_instrument(key))))
     return files
 
 
