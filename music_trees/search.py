@@ -36,9 +36,6 @@ CONFIGS = {
     'height': {
         'height': tune.grid_search([0, 1, 2, 3, 4]),
     },
-    'height-2': {
-        'height': tune.grid_search([0, 1, 2, 3, 4]),
-    },
     'loss-alpha': {
         'height': 4,
         'loss_alpha': tune.grid_search([-4, -3, -2, -1, 0, 1, 2, 3, 4]),
