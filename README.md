@@ -44,18 +44,18 @@ Each model will be stored under `/runs/<NAME>/<VERSION>`.
 
 **Arbitrary Hierarchies**
 ```bash
-export CUDA_VISIBLE_DEVICES=0,1 && python music_trees/search.py --name scrambled-tax
+python music_trees/search.py --name scrambled-tax
 ```
 
 **Height Search**
 (note that `height=0` and `height=1` are the baseline and proposed model, respectively)
 ```bash
-export CUDA_VISIBLE_DEVICES=0,1 && python music_trees/search.py --name height-v1
+python music_trees/search.py --name height-v1
 ```
 
 **Loss Ablation**
 ```bash
-export CUDA_VISIBLE_DEVICES=0,1 && python music_trees/search.py --name loss-alpha
+python music_trees/search.py --name loss-alpha
 ```
 
 TODO: (aldo) add instructions to runs BCE baseline (and change the name of the loss from cross-entropy to BCE)
