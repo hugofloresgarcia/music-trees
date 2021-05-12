@@ -54,16 +54,9 @@ def get_files_for_instrument(instrument: str):
 
 
 def load_all_filepaths():
-    # keep track of each instrument and its list of files
-    path_to_all_files = mt.ASSETS_DIR / 'mdb' / 'mdb-files.json'
-    path_to_all_files.parent.mkdir(parents=True, exist_ok=True)
 
-    if not path_to_all_files.exists():
-        FILES = {inst: get_files_for_instrument(
-            inst) for inst in load_unique_instrument_list()}
-        mt.utils.data.save_entry(FILES, path_to_all_files)
-    else:
-        FILES = mt.utils.data.load_entry(path_to_all_files)
+    FILES = {inst: get_files_for_instrument(
+        inst) for inst in load_unique_instrument_list()}
 
     records = []
     for instrument, paths in FILES.items():
