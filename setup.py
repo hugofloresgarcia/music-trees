@@ -25,6 +25,7 @@ setup(
         'colorama',
         'natsort',
         'test-tube',
+        'str2bool'
     ],
     packages=['music_trees'],
     package_data={'music_trees': ['assets/*']},
