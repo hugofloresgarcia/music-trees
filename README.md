@@ -23,7 +23,7 @@ generation script:
 ```bash
 python -m music_trees.generate \
                 --dataset mdb \
-                --name mdb-augmented \
+                --name mdb \
                 --example_length 1.0 \
                 --augment false \
                 --hop_length 0.5 \
