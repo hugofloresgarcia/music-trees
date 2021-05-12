@@ -148,7 +148,6 @@ def hierarchical_partition(taxonomy: str, name: str, partitions: List[str],
     # load the dataset's records from /data/ and get the classlist
     records = mt.utils.data.glob_all_metadata_entries(mt.DATA_DIR / name)
     classlist = mt.utils.data.get_classlist(records)
-    breakpoint()
 
     # we want to remove all classes not present in the desired taxonomy
     all_leaves = [n.uid for n in tree.leaves(tree.root)]
