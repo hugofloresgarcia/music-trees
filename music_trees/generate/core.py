@@ -54,7 +54,7 @@ def _generate_records_from_file(item: dict):
     for idx, sig in enumerate(windows):
         extra = dict(item)
         del extra['path']
-        entry = mt.utils.data.make_entry(sig, uuid=f'{extra['track']}-{idx}', format='wav', **extra)
+        entry = mt.utils.data.make_entry(sig, uuid=f'{extra["track"]}-{idx}', format='wav', **extra)
 
         if hasattr(sig, '_effect_params'):
             entry['effect_params'] = sig._effect_params
