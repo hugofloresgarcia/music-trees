@@ -310,7 +310,7 @@ class MetaDataModule(pl.LightningDataModule):
 
         if stage == 'fit':
             assert 'train' in partition
-            self.dataset = MetaDataset(self.name, partition='train', deterministic=False,
+            self.dataset = MetaDataset(self.name, partition='train', deterministic=True,
                                        **self.tr_kwargs)
 
             if 'val' in partition:
