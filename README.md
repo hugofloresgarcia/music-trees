@@ -81,7 +81,7 @@ my_experiment/trial3/version_0
 
 Then, run analysis using 
 ```bash
-python music_trees analyze.py my_experiment/<OUTPUT_NAME> 
+python music_trees analyze.py my_experiment   <OUTPUT_NAME> 
 ```
 
 the figures will be created under `/analysis/<OUTPUT_NAME>`
