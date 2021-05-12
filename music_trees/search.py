@@ -24,7 +24,7 @@ DEFAULTS = {
     'loss_alpha': 1,
     'loss_beta': 0.5,
     'loss_weight_fn': 'exp',
-    'dataset': 'mdb-augmented',
+    'dataset': 'mdb',
     'num_workers': 20,
     'learning_rate': 0.03
 }
