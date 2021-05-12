@@ -123,7 +123,7 @@ def display_partition_subtrees(tree, partition, records):
         print(colors.pop(-1))
         print(name.upper())
         ptree = make_partition_subtree(tree, partition, name, records)
-        ptree.show(data_property='n_examples')
+        ptree.show()
         print(Style.RESET_ALL)
 
         logging.info(f'number of {name} classes: {len(partition[name])}')
