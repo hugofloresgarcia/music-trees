@@ -25,7 +25,7 @@ python -m music_trees.generate \
                 --dataset mdb \
                 --name mdb-augmented \
                 --example_length 1.0 \
-                --augment true \
+                --augment false \
                 --hop_length 0.5 \
                 --sample_rate 16000 
 ```
