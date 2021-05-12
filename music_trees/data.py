@@ -123,8 +123,8 @@ class MetaDataset(torch.utils.data.Dataset):
         cached_files = self.root / f'cached_files-{partition}.yaml'
 
         logging.info('loading files')
-        files = {classname: mt.utils.data.glob_all_metadata_entries(
-            self.root / classname, pattern='**/*.json') for classname in classlist}
+        files = {classname: list(sorted(mt.utils.data.glob_all_metadata_entries(
+            self.root / classname, pattern='**/*.json'), key=lambda x: x['uuid'])) for classname in classlist}
 
         # sort by key
         files = OrderedDict(sorted(files.items(), key=lambda x: x[0]))
