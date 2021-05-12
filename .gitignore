@@ -21,4 +21,4 @@ results*.tar.gz
 runs*/
 results*/
 analyses*/
-assets/mdb/*
+assets/mdb/
