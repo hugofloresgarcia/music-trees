@@ -92,6 +92,7 @@ def train(args, use_ray=False):
     # Setup trainer
     trainer = pl.Trainer.from_argparse_args(
         args,
+        deterministic=True,
         max_steps=MAX_EPISODES,
         limit_val_batches=NUM_VAL_EPISODES,
         val_check_interval=VAL_CHECK_INTERVAL,
