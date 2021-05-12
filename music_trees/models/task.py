@@ -123,6 +123,7 @@ class MetaTask(pl.LightningModule):
 
     def training_step(self, episode: dict, index):
         """Performs one step of training"""
+        breakpoint()
         output = self._main_step(episode, index)
         self.log_metrics(output, stage='train')
 
