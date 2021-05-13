@@ -22,7 +22,21 @@ nussl.utils.seed(SEED)
 
 logging.basicConfig(
     format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-    datefmt='%Y-%m-%d:%H:%M:%S', level=logging.INFO)
+    datefmt='%Y-%m-%d:%H:%M:%S', level=logging.INFO)]
+
+def super_seed():
+    pl.seed_everything(mt.SEED)
+    os.environ['PYTHONHASHSEED'] = str(mt.SEED)
+    os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
+    torch.manual_seed(mt.SEED)
+    np.random.seed(mt.SEED)
+    random.seed(mt.SEED) 
+    # for cuda
+    torch.use_deterministic_algorithms(True)
+    torch.cuda.manual_seed_all(mt.SEED)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.enabled = False
 
 # SPEC PARAMS
 HOP_LENGTH = 128

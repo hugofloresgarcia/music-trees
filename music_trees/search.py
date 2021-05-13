@@ -7,7 +7,7 @@ import numpy as np
 from functools import partial
 import music_trees as mt
 import pytorch_lightning as pl
-pl.seed_everything(mt.SEED)
+mt.super_seed()
 
 
 SEEDS = [mt.SEED]

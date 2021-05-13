@@ -9,16 +9,9 @@ import pytorch_lightning as pl
 import numpy as np
 import random
 import torch
+import os
 
-pl.seed_everything(mt.SEED)
-torch.manual_seed(mt.SEED)
-np.random.seed(mt.SEED)
-random.seed(mt.SEED) 
-# for cuda
-torch.cuda.manual_seed_all(mt.SEED)
-torch.backends.cudnn.deterministic = True
-torch.backends.cudnn.benchmark = False
-torch.backends.cudnn.enabled = False
+mt.super_seed()
 
 MAX_EPISODES = 60000
 NUM_VAL_EPISODES = 300
@@ -61,9 +54,6 @@ def train(args, use_ray=False):
     exp_dir = get_exp_dir(args.name, logger.experiment.version)
     task.exp_dir = exp_dir
 
-    emb_loggers = {part: EmbeddingSpaceLogger(exp_dir / f'{part}-embeddings', n_components=2,
-                                              method='tsne') for part in ('train', 'val', 'test')}
-    task.emb_loggers = emb_loggers
 
     # CALLBACKS
     callbacks = []
