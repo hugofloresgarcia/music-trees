@@ -25,15 +25,15 @@ logging.basicConfig(
     datefmt='%Y-%m-%d:%H:%M:%S', level=logging.INFO)
 
 def super_seed():
-    pl.seed_everything(mt.SEED)
-    os.environ['PYTHONHASHSEED'] = str(mt.SEED)
+    pl.seed_everything(SEED)
+    os.environ['PYTHONHASHSEED'] = str(SEED)
     os.environ['CUBLAS_WORKSPACE_CONFIG'] = ':4096:8'
-    torch.manual_seed(mt.SEED)
-    np.random.seed(mt.SEED)
-    random.seed(mt.SEED) 
+    torch.manual_seed(SEED)
+    np.random.seed(SEED)
+    random.seed(SEED) 
     # for cuda
     torch.use_deterministic_algorithms(True)
-    torch.cuda.manual_seed_all(mt.SEED)
+    torch.cuda.manual_seed_all(SEED)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.enabled = False
