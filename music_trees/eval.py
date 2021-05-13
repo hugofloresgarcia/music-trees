@@ -3,7 +3,6 @@ from typing import OrderedDict
 
 import music_trees as mt
 import pytorch_lightning as pl
-pl.seed_everything(mt.SEED)
 from music_trees.tree import MusicTree
 from music_trees.models.task import plot_confusion_matrix
 
@@ -17,6 +16,7 @@ from tqdm import tqdm
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 from embviz.logger import EmbeddingSpaceLogger
 
+mt.super_seed()
 DATASET = 'mdb'
 NUM_WORKERS = 0
 N_EPISODES = 100
