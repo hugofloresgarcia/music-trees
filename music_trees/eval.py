@@ -2,6 +2,8 @@ from logging import log
 from typing import OrderedDict
 
 import music_trees as mt
+import pytorch_lightning as pl
+pl.seed_everything(mt.SEED)
 from music_trees.tree import MusicTree
 from music_trees.models.task import plot_confusion_matrix
 

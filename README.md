@@ -2,6 +2,12 @@
 
 Leveraging Hierarchical Structures for Few Shot Musical Instrument Recognition
 
+##  train-test splits and hierarchies. 
+
+- For all experiments, we used the instrument-based split in `/music_trees/assets/partitions/mdb-aug.json`. 
+- To view our Hornbostel-Sachs class hierarchy, see `/music_trees/assets/taxonomies/deeper-mdb.yaml`. 
+- All random taxonomies are in `/music_trees/assets/taxonomies/scrambled-*.yaml` 
+
 
 ## Installation
 
@@ -58,7 +64,10 @@ python music_trees/search.py --name height-v1
 python music_trees/search.py --name loss-alpha
 ```
 
-TODO: (aldo) add instructions to runs BCE baseline (and change the name of the loss from cross-entropy to BCE)
+train the additional BCE baseline:
+```bash
+python music_trees/train.py --model_name hprotonet --height 4 --d_root 128 --loss_alpha 1 --name "flat (BCE)" --dataset mdb-aug --learning_rate 0.03 --loss_weight_fn cross-entropy
+```
 
 ### 4. Evaluate
 

@@ -17,7 +17,7 @@ BASELINE_NAME = 'baseline'
 ANALYSES_DIR = mt.ROOT_DIR / 'analyses'
 
 ALL_COLORS = ["#ff595e", "#ffca3a", "#8ac926", "#1982c4", "#eaf6ff",
-              "#6a4c93", "#ed6a5a", "#f4f1bb", "#9bc1bc", "#5d576b", ]
+              "#6a4c93", "#ed6a5a", "#f4f1bb", "#9bc1bc", "#5d576b", "#9bc1bc", "#5d576b", ]
 random.shuffle(ALL_COLORS)
 
 
@@ -39,7 +39,8 @@ def significance(df: pd.DataFrame, dv: str, iv: str, cond: str):
             df1 = subset[subset[iv] == s1].copy()
             df2 = subset[subset[iv] == s2].copy()
 
-            stat, p = wilcoxon(df1['value'].values, df2['value'].values)
+            stat, p = wilcoxon(df1['value'].values.astype(
+                np.float), df2['value'].values.astype(np.float))
             pvals.append({
                 'a': s1,
                 'b': s2,
@@ -73,7 +74,8 @@ def bar_with_error(df: pd.DataFrame, dv: str, iv: str,
     for trial in all_trials:
         for c in all_conds:
             # get the list of all scores per episode
-            values = df[(df[iv] == trial) & (df[cond] == c)][dv].values
+            values = df[(df[iv] == trial) & (df[cond] == c)
+                        ][dv].values.astype(np.float)
 
             means[trial].append(np.mean(values))
             stds[trial].append(np.std(values))
@@ -133,7 +135,8 @@ def table(df: pd.DataFrame, dv: str, iv: str,
     for trial in all_trials:
         for c in all_conds:
             # get the list of all scores per episode
-            values = df[(df[iv] == trial) & (df[cond] == c)][dv].values
+            values = df[(df[iv] == trial) & (df[cond] == c)
+                        ][dv].values.astype(np.float)
 
             means[trial].append(np.mean(values))
             stds[trial].append(np.std(values))
@@ -316,9 +319,12 @@ def analyze(df: pd.DataFrame, name: str):
         subdir.mkdir(exist_ok=True)
 
         for metric in metrics:
+            if metric in ['class-list', 'preds', 'target']:
+                continue
             # get the df subset with this
             # metric and tag
             subset = df[(df.tag == tag) & (df.metric == metric)]
+            subset.value = subset.value.astype(np.float)
             if subset.empty:
                 continue
 
@@ -373,6 +379,7 @@ def analyze_folder(path_to_results: str, name: str):
         str(Path(path_to_results) / '**/*.csv'), recursive=True)
     df = pd.concat([pd.read_csv(fp) for fp in filepaths], ignore_index=True)
     df = df.drop_duplicates()
+    #
     return analyze(df, name)
 
 
