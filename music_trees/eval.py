@@ -205,6 +205,30 @@ def episode_metrics(outputs: dict, name: str, results_dir,
                 'tag': tag,
             })
 
+            # episode classlist 
+            results.append({
+                'episode_idx': index,
+                'metric': 'class-list',
+                'value': classlist,
+                'tag': tag,
+            })
+
+            # episode targets 
+            results.append({
+                'episode_idx': index,
+                'metric': 'preds',
+                'value': pred,
+                'tag': tag,
+            })
+
+            # episode predictions 
+            results.append({
+                'episode_idx': index,
+                'metric': 'target',
+                'value': target,
+                'tag': tag,
+            })
+
             # creating the confusion matrix for this episode
             conf_matrix = confusion_matrix(
                 target, pred, normalize='true')
