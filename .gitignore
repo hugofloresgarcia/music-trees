@@ -8,6 +8,9 @@ runs/*
 results/*
 !results/,gitkeep
 analyses/*
+cache
+data
+
 
 __pycache__/
 .DS_Store
@@ -21,3 +24,4 @@ results*.tar.gz
 runs*/
 results*/
 analyses*/
+ismir*

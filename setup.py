@@ -9,9 +9,6 @@ setup(
     name='music_trees',
     description='',
     version='0.0.1',
-    author='Hugo Flores Garcia',
-    author_email='hf01049@georgiasouthern.edu',
-    url='https://github.com/hugofloresgarcia/music-trees',
     install_requires=[
         'pytorch-lightning',
         'nussl',

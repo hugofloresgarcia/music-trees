@@ -13,7 +13,7 @@ then, clone this repo and install with
 pip install -e .
 ```
 
-## Replicating Experiments!
+## Usage
 
 ### 1. Generate data
 
