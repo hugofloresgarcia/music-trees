@@ -1,6 +1,6 @@
 # Music Trees
 
-Leveraging Hierarchical Structures for Few Shot Musical Instrument Recognition
+Supplementary code for the experiments described in the 2021 ISMIR submission: Leveraging Hierarchical Structures for Few Shot Musical Instrument Recognition. 
 
 ##  train-test splits and hierarchies. 
 
