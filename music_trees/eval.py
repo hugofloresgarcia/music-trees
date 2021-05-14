@@ -15,7 +15,7 @@ from tqdm import tqdm
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 from embviz.logger import EmbeddingSpaceLogger
 
-DATASET = 'mdb'
+DATASET = 'mdb-aug'
 NUM_WORKERS = 0
 N_EPISODES = 100
 N_CLASS = 12
@@ -205,7 +205,7 @@ def episode_metrics(outputs: dict, name: str, results_dir,
                 'tag': tag,
             })
 
-            # episode classlist 
+            # episode classlist
             results.append({
                 'episode_idx': index,
                 'metric': 'class-list',
@@ -213,7 +213,7 @@ def episode_metrics(outputs: dict, name: str, results_dir,
                 'tag': tag,
             })
 
-            # episode targets 
+            # episode targets
             results.append({
                 'episode_idx': index,
                 'metric': 'preds',
@@ -221,7 +221,7 @@ def episode_metrics(outputs: dict, name: str, results_dir,
                 'tag': tag,
             })
 
-            # episode predictions 
+            # episode predictions
             results.append({
                 'episode_idx': index,
                 'metric': 'target',
