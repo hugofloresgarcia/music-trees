@@ -5,7 +5,7 @@ Leveraging Hierarchical Structures for Few Shot Musical Instrument Recognition
 ##  train-test splits and hierarchies. 
 
 - For all experiments, we used the instrument-based split in `/music_trees/assets/partitions/mdb-aug.json`. 
-- To view our Hornbostel-Sachs class hierarchy, see `/music_trees/assets/taxonomies/deeper-mdb.yaml`. 
+- To view our Hornbostel-Sachs class hierarchy, see `/music_trees/assets/taxonomies/deeper-mdb.yaml`. Note that not all of the instruments on this taxonomy are used in our experiments. 
 - All random taxonomies are in `/music_trees/assets/taxonomies/scrambled-*.yaml` 
 
 
