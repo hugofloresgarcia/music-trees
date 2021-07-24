@@ -5,10 +5,8 @@ import torch
 import random
 import warnings
 import sox
-import librosa
 
 import music_trees.utils as utils
-import audio_utils as au
 
 
 def get_full_effect_chain():
@@ -36,14 +34,14 @@ def augment_from_array_to_array(audio, sr, effect_chain=None):
     tfm, effect_params = get_random_transformer(effect_chain)
 
     # for now, assert that audio is mono and convert to sox format
-    audio = au.librosa_input_wrap(audio)
+    audio = librosa_input_wrap(audio)
     assert audio.ndim == 1
 
     audio = np.expand_dims(audio, -1)
     tfm_audio = tfm.build_array(input_array=audio, sample_rate_in=sr)
     audio = np.squeeze(audio, axis=-1)
 
-    tfm_audio = au.librosa_output_wrap(audio)
+    tfm_audio = librosa_output_wrap(audio)
     tfm_audio = utils.audio.zero_pad(tfm_audio, audio.shape[-1])
     tfm_audio = tfm_audio[:, 0:audio.shape[-1]]
 
