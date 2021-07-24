@@ -14,6 +14,13 @@ Supplementary code for the experiments described in the 2021 ISMIR submission: L
 first, clone the medleydb repo and install using `pip install -e`:
 - medleydb from [marl](https://github.com/marl/medleydb)
 
+install some utilities for visualizing the embedding space:
+```bash
+git clone https://github.com/hugofloresgarcia/embviz.git
+cd embviz
+pip install -e .
+```
+
 then, clone this repo and install with
 ```bash 
 pip install -e .
