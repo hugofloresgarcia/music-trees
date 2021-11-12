@@ -25,3 +25,8 @@ runs*/
 results*/
 analyses*/
 ismir*
+
+*/**.pyc
+venv/
+embviz/
+medleydb/

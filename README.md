@@ -35,7 +35,7 @@ generation script:
 
 ```bash
 python -m music_trees.generate \
-                --dataset medleydb \
+                --dataset mdb \
                 --name mdb-aug \
                 --example_length 1.0 \
                 --augment true \

@@ -78,7 +78,7 @@ def generate_data(dataset: str, name: str, example_length: float,
                   augment: bool, hop_length: float, sample_rate: int):
     # set an output dir
     output_dir = mt.DATA_DIR / name
-    output_dir.mkdir(exist_ok=False)
+    output_dir.mkdir(exist_ok=True, parents=True)
 
     # grab the dict of all files
     assert dataset in ('mdb', 'katunog')

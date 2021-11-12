@@ -22,7 +22,9 @@ setup(
         'colorama',
         'natsort',
         'test-tube',
-        'str2bool'
+        'str2bool', 
+        'numpy==1.20', 
+        'pyyaml<6.0'
     ],
     packages=['music_trees'],
     package_data={'music_trees': ['assets/*']},
