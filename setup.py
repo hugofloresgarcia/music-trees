@@ -10,7 +10,7 @@ setup(
     description='',
     version='0.0.1',
     install_requires=[
-        'pytorch-lightning',
+        'pytorch-lightning==1.2.1',
         'nussl',
         'librosa',
         'sox',
@@ -24,7 +24,8 @@ setup(
         'test-tube',
         'str2bool', 
         'numpy==1.20', 
-        'pyyaml<6.0'
+        'ray[tune]',
+        'pyyaml<6.0', 
     ],
     packages=['music_trees'],
     package_data={'music_trees': ['assets/*']},

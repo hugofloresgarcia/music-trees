@@ -1,7 +1,7 @@
 from music_trees.models.backbone import Backbone
 import music_trees as mt
 
-from typing import List, OrderedDict, Dict
+from typing import List, Dict
 from argparse import Namespace
 from collections import OrderedDict
 
