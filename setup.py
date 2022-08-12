@@ -23,7 +23,7 @@ setup(
         'natsort',
         'test-tube',
         'str2bool', 
-        'numpy==1.20', 
+        'numpy==1.22.0', 
         'ray[tune]',
         'pyyaml<6.0', 
     ],
